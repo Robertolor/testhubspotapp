@@ -1,0 +1,38 @@
+import { redirect } from "next/navigation";
+import { getSession } from "@/lib/auth/session";
+import { DashboardNav } from "@/components/dashboard-nav";
+
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const session = await getSession();
+  if (!session) {
+    redirect("/");
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <header className="border-b border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-teal-700">
+              Mindbody ↔ HubSpot
+            </p>
+            <h1 className="text-lg font-semibold text-slate-900">
+              Sync Console
+            </h1>
+          </div>
+          <p className="text-sm text-slate-500">
+            Portal {session.portalId}
+          </p>
+        </div>
+      </header>
+      <main className="mx-auto max-w-5xl px-6 py-8">
+        <DashboardNav />
+        <div className="mt-8">{children}</div>
+      </main>
+    </div>
+  );
+}

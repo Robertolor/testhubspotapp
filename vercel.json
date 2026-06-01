@@ -1,0 +1,20 @@
+{
+  "rewrites": [
+    {
+      "source": "/oauth/hubspot",
+      "destination": "/api/oauth/hubspot"
+    },
+    {
+      "source": "/oauth/hubspot/callback",
+      "destination": "/api/oauth/hubspot/callback"
+    },
+    {
+      "source": "/webhooks/hubspot",
+      "destination": "/api/webhooks/hubspot"
+    },
+    {
+      "source": "/webhooks/mindbody",
+      "destination": "/api/webhooks/mindbody"
+    }
+  ]
+}

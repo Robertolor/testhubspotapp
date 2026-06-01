@@ -1,0 +1,9 @@
+# Minimal Supabase local config — link to remote project for migrations
+project_id = "mindbody-hubspot-sync"
+
+[api]
+enabled = true
+
+[db]
+port = 54322
+major_version = 15

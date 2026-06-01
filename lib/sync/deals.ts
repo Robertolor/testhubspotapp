@@ -1,0 +1,143 @@
+import { getSupabase } from "@/lib/db/client";
+import type {
+  HubspotAccount,
+  MindbodyAccount,
+  SyncSettings,
+} from "@/lib/db/types";
+import {
+  createDeal,
+  searchDealByMindbodyId,
+  updateDeal,
+} from "@/lib/hubspot/crm";
+import { getValidAccessToken } from "@/lib/hubspot/tokens";
+import { searchContactByMindbodyId } from "@/lib/hubspot/crm";
+import { allowsSync } from "@/lib/sync/direction";
+
+export async function syncContractToHubspotDeal(
+  tenantId: string,
+  hubspotAccount: HubspotAccount,
+  _mindbodyAccount: MindbodyAccount,
+  settings: SyncSettings,
+  payload: Record<string, unknown>
+): Promise<{ dealId: string }> {
+  if (!settings.deals_enabled) {
+    throw new Error("Deal sync is disabled");
+  }
+  if (!allowsSync(settings.deals_direction, "mindbody", "hubspot")) {
+    throw new Error("Deal sync direction does not allow Mindbody → HubSpot");
+  }
+
+  const clientUniqueId = String(payload.clientUniqueId ?? "");
+  const clientContractId = String(payload.clientContractId ?? "");
+  const contractName = String(payload.contractName ?? "Mindbody Contract");
+
+  if (!clientContractId) {
+    throw new Error("Missing clientContractId in contract webhook");
+  }
+
+  const accessToken = await getValidAccessToken(hubspotAccount);
+  let dealId = await searchDealByMindbodyId(
+    accessToken,
+    "mindbody_contract_id",
+    clientContractId
+  );
+
+  const contactId = clientUniqueId
+    ? await searchContactByMindbodyId(accessToken, clientUniqueId)
+    : null;
+
+  const dealProps = {
+    dealname: contractName,
+    deal_source: "mindbody_contract",
+    mindbody_contract_id: clientContractId,
+    mindbody_client_id: clientUniqueId,
+    closedate: payload.contractStartDateTime
+      ? String(payload.contractStartDateTime).split("T")[0]
+      : undefined,
+  };
+
+  if (dealId) {
+    await updateDeal(accessToken, dealId, dealProps);
+  } else {
+    dealId = await createDeal(accessToken, dealProps, contactId ?? undefined);
+  }
+
+  await getSupabase().from("entity_mappings").upsert(
+    {
+      tenant_id: tenantId,
+      entity_type: "deal",
+      hubspot_id: dealId,
+      mindbody_id: clientContractId,
+      deal_source: "mindbody_contract",
+      last_source: "mindbody",
+      last_synced_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "tenant_id,entity_type,hubspot_id" }
+  );
+
+  return { dealId };
+}
+
+export async function syncSaleToHubspotDeal(
+  tenantId: string,
+  hubspotAccount: HubspotAccount,
+  settings: SyncSettings,
+  payload: Record<string, unknown>
+): Promise<{ dealId: string }> {
+  if (!settings.deals_enabled) {
+    throw new Error("Deal sync is disabled");
+  }
+  if (!allowsSync(settings.deals_direction, "mindbody", "hubspot")) {
+    throw new Error("Deal sync direction does not allow Mindbody → HubSpot");
+  }
+
+  const saleId = String(payload.saleId ?? payload.id ?? "");
+  const clientId = String(payload.clientId ?? payload.clientUniqueId ?? "");
+
+  if (!saleId) {
+    throw new Error("Missing sale id in sale webhook");
+  }
+
+  const accessToken = await getValidAccessToken(hubspotAccount);
+  let dealId = await searchDealByMindbodyId(
+    accessToken,
+    "mindbody_sale_id",
+    saleId
+  );
+
+  const amount = payload.totalAmount ?? payload.paymentsTotal;
+  const contactId = clientId
+    ? await searchContactByMindbodyId(accessToken, clientId)
+    : null;
+
+  const dealProps = {
+    dealname: `Mindbody Sale ${saleId}`,
+    deal_source: "mindbody_sale",
+    mindbody_sale_id: saleId,
+    mindbody_client_id: clientId,
+    amount: amount !== undefined ? String(amount) : undefined,
+  };
+
+  if (dealId) {
+    await updateDeal(accessToken, dealId, dealProps);
+  } else {
+    dealId = await createDeal(accessToken, dealProps, contactId ?? undefined);
+  }
+
+  await getSupabase().from("entity_mappings").upsert(
+    {
+      tenant_id: tenantId,
+      entity_type: "deal",
+      hubspot_id: dealId,
+      mindbody_id: saleId,
+      deal_source: "mindbody_sale",
+      last_source: "mindbody",
+      last_synced_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "tenant_id,entity_type,hubspot_id" }
+  );
+
+  return { dealId };
+}
