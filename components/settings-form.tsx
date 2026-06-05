@@ -111,7 +111,7 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
               type="number"
               value={siteId}
               onChange={(e) => setSiteId(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+              className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400"
               placeholder="e.g. 12345"
             />
           </label>
@@ -121,7 +121,7 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
               type="password"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+              className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400"
               placeholder={
                 data?.mindbody?.configured ? "••••••••" : "Paste API key"
               }
@@ -191,7 +191,7 @@ function SyncRow({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-4 rounded-lg bg-slate-50 p-4">
-      <label className="flex items-center gap-2 text-sm font-medium">
+      <label className="flex items-center gap-2 text-sm font-medium text-slate-900">
         <input
           type="checkbox"
           checked={enabled}
@@ -203,7 +203,7 @@ function SyncRow({
         value={direction}
         onChange={(e) => onDirectionChange(e.target.value as SyncDirection)}
         disabled={!enabled}
-        className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm disabled:opacity-50"
+        className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 disabled:opacity-50"
       >
         <option value="mb_to_hs">Mindbody → HubSpot</option>
         <option value="hs_to_mb">HubSpot → Mindbody</option>
