@@ -36,6 +36,10 @@ export interface MindbodyAccount {
   tenant_id: string;
   site_id: number;
   api_key_encrypted: string | null;
+  staff_username: string | null;
+  staff_password_encrypted: string | null;
+  access_token_encrypted: string | null;
+  oauth_expires_at: string | null;
 }
 
 export interface SyncSettings {

@@ -29,7 +29,7 @@ export default async function SetupPage() {
     {
       done: !!mindbody,
       title: "Add Mindbody credentials",
-      detail: "Site ID and API key from your Mindbody business.",
+      detail: "Site ID, API key, and staff login from your Mindbody business.",
     },
     {
       done: settings?.contacts_enabled || settings?.deals_enabled,

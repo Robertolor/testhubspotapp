@@ -2,6 +2,7 @@ import { decryptSecret } from "@/lib/crypto/secrets";
 import { getSupabase } from "@/lib/db/client";
 import type { MindbodyAccount } from "@/lib/db/types";
 import { MINDBODY_PUBLIC_API } from "@/lib/mindbody/config";
+import { getValidMindbodyUserToken } from "@/lib/mindbody/tokens";
 
 export interface MindbodyClientRecord {
   Id: string;
@@ -71,7 +72,8 @@ export async function mindbodyRequest(
   method: string,
   path: string,
   query?: Record<string, string>,
-  body?: unknown
+  body?: unknown,
+  accessToken?: string
 ): Promise<Response> {
   const url = new URL(`${MINDBODY_PUBLIC_API}${path}`);
   if (query) {
@@ -80,25 +82,53 @@ export async function mindbodyRequest(
     }
   }
 
+  const headers: Record<string, string> = {
+    "Api-Key": apiKey,
+    SiteId: String(siteId),
+    "Content-Type": "application/json",
+  };
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
+
   return fetch(url.toString(), {
     method,
-    headers: {
-      "Api-Key": apiKey,
-      SiteId: String(siteId),
-      "Content-Type": "application/json",
-    },
+    headers,
     body: body ? JSON.stringify(body) : undefined,
   });
+}
+
+async function mindbodyRequestForAccount(
+  account: MindbodyAccount,
+  method: string,
+  path: string,
+  query?: Record<string, string>,
+  body?: unknown,
+  options?: { requireUserToken?: boolean }
+): Promise<Response> {
+  const apiKey = getApiKey(account);
+  const requireUserToken = options?.requireUserToken ?? true;
+  const accessToken = requireUserToken
+    ? await getValidMindbodyUserToken(account)
+    : undefined;
+
+  return mindbodyRequest(
+    account.site_id,
+    apiKey,
+    method,
+    path,
+    query,
+    body,
+    accessToken
+  );
 }
 
 export async function fetchMindbodyClient(
   account: MindbodyAccount,
   clientId: string
 ): Promise<MindbodyClientRecord | null> {
-  const apiKey = getApiKey(account);
-  const res = await mindbodyRequest(
-    account.site_id,
-    apiKey,
+  const res = await mindbodyRequestForAccount(
+    account,
     "GET",
     "/client/clients",
     { ClientIds: clientId }
@@ -113,10 +143,8 @@ export async function listMindbodyClients(
   offset: number,
   limit: number
 ): Promise<MindbodyClientRecord[]> {
-  const apiKey = getApiKey(account);
-  const res = await mindbodyRequest(
-    account.site_id,
-    apiKey,
+  const res = await mindbodyRequestForAccount(
+    account,
     "GET",
     "/client/clients",
     {
@@ -144,10 +172,8 @@ export async function addOrUpdateMindbodyClient(
     Id?: string;
   }
 ): Promise<string> {
-  const apiKey = getApiKey(account);
-  const res = await mindbodyRequest(
-    account.site_id,
-    apiKey,
+  const res = await mindbodyRequestForAccount(
+    account,
     "POST",
     "/client/addclient",
     undefined,
@@ -170,10 +196,8 @@ export async function fetchClientContracts(
   account: MindbodyAccount,
   clientId: string
 ): Promise<Record<string, unknown>[]> {
-  const apiKey = getApiKey(account);
-  const res = await mindbodyRequest(
-    account.site_id,
-    apiKey,
+  const res = await mindbodyRequestForAccount(
+    account,
     "GET",
     "/client/clientcontracts",
     { ClientId: clientId }

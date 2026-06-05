@@ -13,7 +13,12 @@ interface SettingsData {
     deals_enabled: boolean;
     deals_direction: SyncDirection;
   };
-  mindbody?: { siteId?: number; configured: boolean };
+  mindbody?: {
+    siteId?: number;
+    configured: boolean;
+    staffUsername?: string;
+    staffConfigured?: boolean;
+  };
   hubspot?: { portalId: number; hubDomain: string | null };
 }
 
@@ -21,6 +26,8 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
   const [data, setData] = useState<SettingsData | null>(null);
   const [siteId, setSiteId] = useState("");
   const [apiKey, setApiKey] = useState("");
+  const [staffUsername, setStaffUsername] = useState("");
+  const [staffPassword, setStaffPassword] = useState("");
   const [contactsEnabled, setContactsEnabled] = useState(false);
   const [contactsDirection, setContactsDirection] =
     useState<SyncDirection>("mb_to_hs");
@@ -42,6 +49,7 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
           setDealsDirection(d.settings.deals_direction);
         }
         if (d.mindbody?.siteId) setSiteId(String(d.mindbody.siteId));
+        if (d.mindbody?.staffUsername) setStaffUsername(d.mindbody.staffUsername);
       });
   }, [tenantId]);
 
@@ -53,10 +61,14 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          mindbody:
-            siteId && apiKey
-              ? { siteId: Number(siteId), apiKey }
-              : undefined,
+          mindbody: siteId
+            ? {
+                siteId: Number(siteId),
+                ...(apiKey ? { apiKey } : {}),
+                ...(staffUsername ? { staffUsername } : {}),
+                ...(staffPassword ? { staffPassword } : {}),
+              }
+            : undefined,
           sync: {
             contactsEnabled,
             contactsDirection,
@@ -69,6 +81,7 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
       if (!res.ok) throw new Error(json.error ?? "Save failed");
       setMessage("Settings saved.");
       setApiKey("");
+      setStaffPassword("");
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Save failed");
     } finally {
@@ -102,7 +115,8 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
       <Card>
         <CardTitle>Mindbody credentials</CardTitle>
         <p className="mt-1 text-sm text-slate-500">
-          Each client provides their Site ID and API key from Mindbody activation.
+          Each business provides their Site ID, API key, and a staff login with
+          API access permission.
         </p>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <label className="block text-sm">
@@ -112,7 +126,7 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
               value={siteId}
               onChange={(e) => setSiteId(e.target.value)}
               className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400"
-              placeholder="e.g. 12345"
+              placeholder="e.g. 12345 or -99 for sandbox"
             />
           </label>
           <label className="block text-sm">
@@ -124,6 +138,32 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
               className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400"
               placeholder={
                 data?.mindbody?.configured ? "••••••••" : "Paste API key"
+              }
+            />
+          </label>
+          <label className="block text-sm sm:col-span-2">
+            <span className="font-medium text-slate-700">
+              Staff username (email)
+            </span>
+            <input
+              type="email"
+              value={staffUsername}
+              onChange={(e) => setStaffUsername(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400"
+              placeholder="Staff account with API permission"
+            />
+          </label>
+          <label className="block text-sm sm:col-span-2">
+            <span className="font-medium text-slate-700">Staff password</span>
+            <input
+              type="password"
+              value={staffPassword}
+              onChange={(e) => setStaffPassword(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400"
+              placeholder={
+                data?.mindbody?.staffConfigured
+                  ? "••••••••"
+                  : "Staff account password"
               }
             />
           </label>

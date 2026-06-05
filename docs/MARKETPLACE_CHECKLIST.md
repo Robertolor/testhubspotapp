@@ -20,7 +20,7 @@ Use this on staging before submitting the app for review.
 
 - [ ] Developer account approved for live API access
 - [ ] Business activated with developer API key
-- [ ] Save Site ID + API key in Settings → connection test passes
+- [ ] Save Site ID, API key, and staff login in Settings → connection test passes
 - [ ] Webhook subscription created and active
 
 ## Sync E2E

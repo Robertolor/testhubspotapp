@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { encryptSecret } from "@/lib/crypto/secrets";
+import { decryptSecret, encryptSecret } from "@/lib/crypto/secrets";
 import { getSession } from "@/lib/auth/session";
 import { getSupabase } from "@/lib/db/client";
-import { testMindbodyConnection } from "@/lib/mindbody/client";
+import {
+  getMindbodyAccountByTenant,
+  testMindbodyConnection,
+} from "@/lib/mindbody/client";
+import {
+  issueMindbodyUserToken,
+  storeMindbodyUserToken,
+  testMindbodyStaffConnection,
+} from "@/lib/mindbody/tokens";
 import { ensureMindbodyWebhookSubscription } from "@/lib/mindbody/webhooks-subscribe";
 
 async function assertTenantAccess(tenantId: string) {
@@ -28,7 +36,7 @@ export async function GET(
       supabase.from("sync_settings").select("*").eq("tenant_id", tenantId).single(),
       supabase
         .from("mindbody_accounts")
-        .select("site_id, created_at, updated_at")
+        .select("site_id, staff_username, created_at, updated_at")
         .eq("tenant_id", tenantId)
         .maybeSingle(),
       supabase
@@ -46,7 +54,12 @@ export async function GET(
   return NextResponse.json({
     settings,
     mindbody: mindbody
-      ? { siteId: mindbody.site_id, configured: true }
+      ? {
+          siteId: mindbody.site_id,
+          configured: true,
+          staffUsername: mindbody.staff_username ?? undefined,
+          staffConfigured: Boolean(mindbody.staff_username),
+        }
       : { configured: false },
     hubspot: hubspot
       ? {
@@ -67,7 +80,12 @@ export async function PUT(
   if (denied) return denied;
 
   const body = (await request.json()) as {
-    mindbody?: { siteId: number; apiKey: string };
+    mindbody?: {
+      siteId?: number;
+      apiKey?: string;
+      staffUsername?: string;
+      staffPassword?: string;
+    };
     sync?: {
       contactsEnabled?: boolean;
       contactsDirection?: string;
@@ -96,27 +114,103 @@ export async function PUT(
       .eq("tenant_id", tenantId);
   }
 
-  if (body.mindbody?.siteId && body.mindbody?.apiKey) {
-    const test = await testMindbodyConnection(
-      body.mindbody.siteId,
-      body.mindbody.apiKey
-    );
-    if (!test.ok) {
-      return NextResponse.json({ error: test.message }, { status: 400 });
+  if (body.mindbody?.siteId) {
+    const existing = await getMindbodyAccountByTenant(tenantId);
+
+    const siteId = body.mindbody.siteId;
+    const apiKey =
+      body.mindbody.apiKey?.trim() ||
+      (existing?.api_key_encrypted
+        ? decryptSecret(existing.api_key_encrypted)
+        : null);
+
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "Mindbody API key is required" },
+        { status: 400 }
+      );
     }
 
-    await supabase.from("mindbody_accounts").upsert(
-      {
-        tenant_id: tenantId,
-        site_id: body.mindbody.siteId,
-        api_key_encrypted: encryptSecret(body.mindbody.apiKey),
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "tenant_id" }
-    );
+    const staffUsername =
+      body.mindbody.staffUsername?.trim() ||
+      existing?.staff_username ||
+      null;
+    const staffPassword =
+      body.mindbody.staffPassword?.trim() ||
+      (existing?.staff_password_encrypted
+        ? decryptSecret(existing.staff_password_encrypted)
+        : null);
+
+    if (!staffUsername || !staffPassword) {
+      return NextResponse.json(
+        {
+          error:
+            "Mindbody staff username and password are required for API access.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const siteTest = await testMindbodyConnection(siteId, apiKey);
+    if (!siteTest.ok) {
+      return NextResponse.json({ error: siteTest.message }, { status: 400 });
+    }
+
+    if (staffUsername && staffPassword) {
+      const staffTest = await testMindbodyStaffConnection(
+        siteId,
+        apiKey,
+        staffUsername,
+        staffPassword
+      );
+      if (!staffTest.ok) {
+        return NextResponse.json({ error: staffTest.message }, { status: 400 });
+      }
+    }
+
+    const credentialsChanged =
+      existing?.site_id !== siteId ||
+      Boolean(body.mindbody.apiKey) ||
+      body.mindbody.staffUsername?.trim() ||
+      body.mindbody.staffPassword?.trim();
+
+    const upsertRow: Record<string, unknown> = {
+      tenant_id: tenantId,
+      site_id: siteId,
+      api_key_encrypted: encryptSecret(apiKey),
+      updated_at: new Date().toISOString(),
+    };
+
+    if (staffUsername && staffPassword) {
+      upsertRow.staff_username = staffUsername;
+      upsertRow.staff_password_encrypted = encryptSecret(staffPassword);
+    }
+
+    if (credentialsChanged) {
+      upsertRow.access_token_encrypted = null;
+      upsertRow.oauth_expires_at = null;
+    }
+
+    await supabase.from("mindbody_accounts").upsert(upsertRow, {
+      onConflict: "tenant_id",
+    });
+
+    if (staffUsername && staffPassword) {
+      try {
+        const tokenResponse = await issueMindbodyUserToken(
+          siteId,
+          apiKey,
+          staffUsername,
+          staffPassword
+        );
+        await storeMindbodyUserToken(tenantId, tokenResponse);
+      } catch (e) {
+        console.warn("Mindbody token storage:", e);
+      }
+    }
 
     try {
-      await ensureMindbodyWebhookSubscription(tenantId, body.mindbody.siteId);
+      await ensureMindbodyWebhookSubscription(tenantId, siteId);
     } catch (e) {
       console.warn("Mindbody webhook subscription:", e);
     }
