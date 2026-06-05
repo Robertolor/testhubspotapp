@@ -19,6 +19,14 @@ import {
 } from "@/lib/sync/field-mappings";
 import { allowsSync } from "@/lib/sync/direction";
 
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function isLikelyValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
+}
+
 export async function syncContactMindbodyToHubspot(
   tenantId: string,
   hubspotAccount: HubspotAccount,
@@ -47,10 +55,14 @@ export async function syncContactMindbodyToHubspot(
   );
   props.mindbody_client_id = client.Id;
 
-  const email = props.email;
+  const email = props.email ? normalizeEmail(props.email) : "";
   if (!email) {
     throw new Error("Mindbody client has no email; cannot sync contact");
   }
+  if (!isLikelyValidEmail(email)) {
+    throw new Error(`Invalid email format for HubSpot sync: ${email}`);
+  }
+  props.email = email;
 
   const accessToken = await getValidAccessToken(hubspotAccount);
   let hubspotId = await searchContactByMindbodyId(accessToken, client.Id);

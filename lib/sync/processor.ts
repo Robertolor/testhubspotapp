@@ -1,8 +1,6 @@
 import { getSupabase } from "@/lib/db/client";
 import type { EntityType, WebhookSource } from "@/lib/db/types";
 import { getHubspotAccountByTenant } from "@/lib/hubspot/tokens";
-import { bootstrapHubspotProperties } from "@/lib/hubspot/properties";
-import { getValidAccessToken } from "@/lib/hubspot/tokens";
 import { getMindbodyAccountByTenant } from "@/lib/mindbody/client";
 import {
   syncContactHubspotToMindbody,
@@ -15,6 +13,7 @@ import {
   logSyncError,
   logSyncEvent,
 } from "@/lib/sync/runs";
+import { ensureHubspotPropertiesForTenant } from "@/lib/sync/ensure-hubspot-properties";
 import type { SyncSettings } from "@/lib/db/types";
 
 export interface ProcessWebhookInput {
@@ -46,14 +45,7 @@ export async function processWebhookDelivery(
   let failed = 0;
 
   try {
-    if (!settings.hubspot_properties_bootstrapped) {
-      const token = await getValidAccessToken(hubspotAccount);
-      await bootstrapHubspotProperties(token);
-      await getSupabase()
-        .from("sync_settings")
-        .update({ hubspot_properties_bootstrapped: true })
-        .eq("tenant_id", tenantId);
-    }
+    await ensureHubspotPropertiesForTenant(tenantId, hubspotAccount);
 
     if (source === "hubspot") {
       const events = Array.isArray(payload) ? payload : [payload];
@@ -278,6 +270,18 @@ export async function runBackfill(
   const runId = await createSyncRun(tenantId, "manual", entityType);
   let processed = 0;
   let failed = 0;
+
+  try {
+    await ensureHubspotPropertiesForTenant(tenantId, hubspotAccount);
+  } catch (e) {
+    await completeSyncRun(runId, "failed", 0, 1);
+    await logSyncError(
+      tenantId,
+      e instanceof Error ? e.message : "HubSpot property bootstrap failed",
+      { syncRunId: runId, entityType }
+    );
+    throw e;
+  }
 
   if (entityType === "contact" && settings.contacts_enabled) {
     const { listMindbodyClients } = await import("@/lib/mindbody/client");

@@ -78,9 +78,8 @@ async function ensurePropertyGroup(
   );
   if (!res.ok && res.status !== 409) {
     const text = await res.text();
-    if (!text.includes("already exists")) {
-      console.warn(`Property group ${objectType}: ${text}`);
-    }
+    if (text.includes("already exists")) return;
+    throw new Error(`Failed to create HubSpot property group for ${objectType}: ${text}`);
   }
 }
 
@@ -102,9 +101,8 @@ async function ensureProperty(
   );
   if (!res.ok && res.status !== 409) {
     const text = await res.text();
-    if (!text.includes("already exists")) {
-      console.warn(`Property ${prop.name}: ${text}`);
-    }
+    if (text.includes("already exists")) return;
+    throw new Error(`Failed to create HubSpot property ${prop.name}: ${text}`);
   }
 }
 
