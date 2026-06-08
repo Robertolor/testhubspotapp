@@ -6,6 +6,10 @@ export const HUBSPOT_SCOPES = [
   "crm.objects.contacts.write",
   "crm.objects.deals.read",
   "crm.objects.deals.write",
+  "crm.schemas.contacts.read",
+  "crm.schemas.contacts.write",
+  "crm.schemas.deals.read",
+  "crm.schemas.deals.write",
 ].join(" ");
 
 export const HUBSPOT_WEBHOOK_EVENTS = [
