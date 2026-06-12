@@ -44,6 +44,24 @@ export async function dispatchBackfill(
   await runBackfill(tenantId, entityType);
 }
 
+export async function dispatchTestSync(
+  tenantId: string,
+  entityType: EntityType
+): Promise<void> {
+  const eventName =
+    entityType === "contact"
+      ? "sync/test-contacts"
+      : "sync/test-deals";
+
+  if (process.env.INNGEST_EVENT_KEY || process.env.INNGEST_SIGNING_KEY) {
+    await inngest.send({ name: eventName, data: { tenantId } });
+    return;
+  }
+
+  const { runTestSync } = await import("@/lib/sync/test-sync");
+  await runTestSync(tenantId, entityType);
+}
+
 export async function dispatchReplay(deliveryId: string): Promise<void> {
   if (process.env.INNGEST_EVENT_KEY || process.env.INNGEST_SIGNING_KEY) {
     await inngest.send({

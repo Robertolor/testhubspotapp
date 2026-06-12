@@ -10,7 +10,8 @@ import type {
 export async function createSyncRun(
   tenantId: string,
   triggerSource: SyncSource,
-  entityType?: EntityType
+  entityType?: EntityType,
+  metadata?: Record<string, unknown>
 ): Promise<string> {
   const { data, error } = await getSupabase()
     .from("sync_runs")
@@ -19,6 +20,7 @@ export async function createSyncRun(
       trigger_source: triggerSource,
       entity_type: entityType ?? null,
       status: "running",
+      metadata: metadata ?? {},
     })
     .select("id")
     .single();

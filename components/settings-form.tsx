@@ -100,6 +100,17 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
     setMessage(json.message ?? (res.ok ? "Backfill queued" : json.error));
   }
 
+  async function runTestSync(entityType: "contact" | "deal") {
+    setMessage(null);
+    const res = await fetch(`/api/tenants/${tenantId}/sync/test`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ entityType }),
+    });
+    const json = await res.json();
+    setMessage(json.message ?? (res.ok ? "Test sync started" : json.error));
+  }
+
   return (
     <div className="space-y-6">
       {data?.hubspot && (
@@ -193,17 +204,38 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
         </div>
       </Card>
 
+      <Card className="border-amber-200 bg-amber-50/50">
+        <CardTitle>Sandbox test sync (temporary)</CardTitle>
+        <p className="mt-1 text-sm text-slate-600">
+          Syncs at most <strong>20</strong> contacts or deals from Mindbody for
+          E2E validation. Detailed steps are logged in Reports and Vercel
+          function logs. Use this instead of full backfill on shared sandbox
+          site <code className="text-xs">-99</code>.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <Button variant="secondary" onClick={() => runTestSync("contact")}>
+            Test sync contacts (20)
+          </Button>
+          <Button variant="secondary" onClick={() => runTestSync("deal")}>
+            Test sync deals (20)
+          </Button>
+        </div>
+      </Card>
+
       <div className="flex flex-wrap gap-3">
         <Button onClick={save} disabled={saving}>
           {saving ? "Saving…" : "Save settings"}
         </Button>
         <Button variant="secondary" onClick={() => runBackfill("contact")}>
-          Backfill contacts
+          Full backfill contacts
         </Button>
         <Button variant="secondary" onClick={() => runBackfill("deal")}>
-          Backfill deals
+          Full backfill deals
         </Button>
       </div>
+      <p className="text-xs text-slate-500">
+        Full backfill pulls all records — avoid on Mindbody sandbox.
+      </p>
 
       {message && (
         <p

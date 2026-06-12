@@ -206,3 +206,27 @@ export async function fetchClientContracts(
   const data = (await res.json()) as { Contracts?: Record<string, unknown>[] };
   return data.Contracts ?? [];
 }
+
+export async function listMindbodySales(
+  account: MindbodyAccount,
+  offset: number,
+  limit: number
+): Promise<Record<string, unknown>[]> {
+  const res = await mindbodyRequestForAccount(
+    account,
+    "GET",
+    "/sale/sales",
+    {
+      Limit: String(limit),
+      Offset: String(offset),
+    }
+  );
+  if (!res.ok) {
+    throw new Error(`Mindbody list sales failed: ${await res.text()}`);
+  }
+  const data = (await res.json()) as {
+    Sales?: Record<string, unknown>[];
+    PaginationResponse?: { TotalResults: number };
+  };
+  return data.Sales ?? [];
+}

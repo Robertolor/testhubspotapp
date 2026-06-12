@@ -1,5 +1,6 @@
 import { inngest } from "@/lib/inngest/client";
 import { processWebhookDelivery, runBackfill } from "@/lib/sync/processor";
+import { runTestSync } from "@/lib/sync/test-sync";
 import { getSupabase } from "@/lib/db/client";
 import type { EntityType } from "@/lib/db/types";
 
@@ -41,6 +42,28 @@ export const backfillDeals = inngest.createFunction(
   }
 );
 
+export const testSyncContacts = inngest.createFunction(
+  {
+    id: "sync-test-contacts",
+    retries: 1,
+    triggers: [{ event: "sync/test-contacts" }],
+  },
+  async ({ event }) => {
+    await runTestSync(event.data.tenantId as string, "contact");
+  }
+);
+
+export const testSyncDeals = inngest.createFunction(
+  {
+    id: "sync-test-deals",
+    retries: 1,
+    triggers: [{ event: "sync/test-deals" }],
+  },
+  async ({ event }) => {
+    await runTestSync(event.data.tenantId as string, "deal");
+  }
+);
+
 export const replayWebhook = inngest.createFunction(
   {
     id: "sync-replay-webhook",
@@ -75,6 +98,8 @@ export const inngestFunctions = [
   processWebhook,
   backfillContacts,
   backfillDeals,
+  testSyncContacts,
+  testSyncDeals,
   replayWebhook,
 ];
 
