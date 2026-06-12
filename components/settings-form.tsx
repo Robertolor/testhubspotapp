@@ -102,13 +102,32 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
 
   async function runTestSync(entityType: "contact" | "deal") {
     setMessage(null);
-    const res = await fetch(`/api/tenants/${tenantId}/sync/test`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ entityType }),
-    });
-    const json = await res.json();
-    setMessage(json.message ?? (res.ok ? "Test sync started" : json.error));
+    try {
+      const res = await fetch(`/api/tenants/${tenantId}/sync/test`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entityType }),
+      });
+      const text = await res.text();
+      let json: { message?: string; error?: string } = {};
+      if (text) {
+        try {
+          json = JSON.parse(text) as { message?: string; error?: string };
+        } catch {
+          throw new Error(
+            res.ok
+              ? "Unexpected server response"
+              : `Server error (${res.status})`
+          );
+        }
+      }
+      if (!res.ok) {
+        throw new Error(json.error ?? `Server error (${res.status})`);
+      }
+      setMessage(json.message ?? "Test sync started. Check Reports.");
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Test sync failed");
+    }
   }
 
   return (
