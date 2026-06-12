@@ -140,6 +140,17 @@ export async function runTestSync(
   const log = new TestSyncLogger(tenantId, runId, entityType);
   let processed = 0;
   let failed = 0;
+  let runCompleted = false;
+
+  const finishRun = async (
+    status: "completed" | "partial" | "failed",
+    p = processed,
+    f = failed
+  ) => {
+    if (runCompleted) return;
+    runCompleted = true;
+    await completeSyncRun(runId, status, p, f);
+  };
 
   log.step("runTestSync.start", {
     entityType,
@@ -151,121 +162,136 @@ export async function runTestSync(
     log.step("ensureHubspotProperties.start");
     await ensureHubspotPropertiesForTenant(tenantId, hubspotAccount);
     await log.record("ensureHubspotProperties", "success");
-  } catch (e) {
-    await log.fail("ensureHubspotProperties", e);
-    await completeSyncRun(runId, "failed", 0, 1);
-    throw e;
-  }
 
-  if (entityType === "contact") {
-    if (!settings.contacts_enabled) {
-      const msg = "Contact sync is disabled in settings";
-      await log.record("contacts_enabled.check", "skipped", { message: msg });
-      await completeSyncRun(runId, "failed", 0, 1);
-      throw new Error(msg);
-    }
+    if (entityType === "contact") {
+      if (!settings.contacts_enabled) {
+        const msg = "Contact sync is disabled in settings";
+        await log.record("contacts_enabled.check", "skipped", { message: msg });
+        await finishRun("failed", 0, 1);
+        throw new Error(msg);
+      }
 
-    log.step("listMindbodyClients.start", { limit: TEST_SYNC_RECORD_LIMIT });
-    const clients = await listMindbodyClients(
-      mindbodyAccount,
-      0,
-      TEST_SYNC_RECORD_LIMIT
-    );
-    log.step("listMindbodyClients.done", { returned: clients.length });
-
-    for (const client of clients) {
-      const clientId = client.Id;
-      log.step("syncContact.start", {
-        clientId,
-        email: client.Email ?? null,
+      await log.record("listMindbodyClients", "success", {
+        message: `Fetching up to ${TEST_SYNC_RECORD_LIMIT} clients from Mindbody`,
       });
 
+      let clients;
       try {
-        const result = await syncContactMindbodyToHubspot(
-          tenantId,
-          hubspotAccount,
+        clients = await listMindbodyClients(
           mindbodyAccount,
-          settings,
-          clientId,
-          runId
+          0,
+          TEST_SYNC_RECORD_LIMIT
         );
-        processed++;
-        await log.record("syncContact", "success", {
-          sourceId: clientId,
-          targetId: result.hubspotId,
-          detail: { email: client.Email },
-        });
       } catch (e) {
-        failed++;
-        await log.fail("syncContact", e, clientId);
+        await log.fail("listMindbodyClients", e);
+        await finishRun("failed", 0, 1);
+        throw e;
+      }
+
+      await log.record("listMindbodyClients", "success", {
+        message: `Fetched ${clients.length} clients`,
+        detail: { returned: clients.length },
+      });
+
+      for (const client of clients) {
+        const clientId = client.Id;
+        log.step("syncContact.start", {
+          clientId,
+          email: client.Email ?? null,
+        });
+
+        try {
+          const result = await syncContactMindbodyToHubspot(
+            tenantId,
+            hubspotAccount,
+            mindbodyAccount,
+            settings,
+            clientId,
+            runId
+          );
+          processed++;
+          await log.record("syncContact", "success", {
+            sourceId: clientId,
+            targetId: result.hubspotId,
+            detail: { email: client.Email },
+          });
+        } catch (e) {
+          failed++;
+          await log.fail("syncContact", e, clientId);
+        }
       }
     }
-  }
 
-  if (entityType === "deal") {
-    if (!settings.deals_enabled) {
-      const msg = "Deal sync is disabled in settings";
-      await log.record("deals_enabled.check", "skipped", { message: msg });
-      await completeSyncRun(runId, "failed", 0, 1);
-      throw new Error(msg);
-    }
+    if (entityType === "deal") {
+      if (!settings.deals_enabled) {
+        const msg = "Deal sync is disabled in settings";
+        await log.record("deals_enabled.check", "skipped", { message: msg });
+        await finishRun("failed", 0, 1);
+        throw new Error(msg);
+      }
 
-    const dealItems = await loadTestDealItems(
-      mindbodyAccount,
-      TEST_SYNC_RECORD_LIMIT,
-      log
-    );
-
-    if (dealItems.length === 0) {
-      await log.record("loadTestDealItems", "skipped", {
-        message: "No sales or contracts found in Mindbody for test sync",
-      });
-    }
-
-    for (const item of dealItems) {
-      const externalId = String(
-        item.kind === "sale"
-          ? item.payload.saleId
-          : item.payload.clientContractId
+      const dealItems = await loadTestDealItems(
+        mindbodyAccount,
+        TEST_SYNC_RECORD_LIMIT,
+        log
       );
 
-      log.step(`syncDeal.${item.kind}.start`, { externalId, payload: item.payload });
-
-      try {
-        const result =
-          item.kind === "sale"
-            ? await syncSaleToHubspotDeal(
-                tenantId,
-                hubspotAccount,
-                settings,
-                item.payload
-              )
-            : await syncContractToHubspotDeal(
-                tenantId,
-                hubspotAccount,
-                mindbodyAccount,
-                settings,
-                item.payload
-              );
-
-        processed++;
-        await log.record(`syncDeal.${item.kind}`, "success", {
-          sourceId: externalId,
-          targetId: result.dealId,
+      if (dealItems.length === 0) {
+        await log.record("loadTestDealItems", "skipped", {
+          message: "No sales or contracts found in Mindbody for test sync",
         });
-      } catch (e) {
-        failed++;
-        await log.fail(`syncDeal.${item.kind}`, e, externalId);
+      }
+
+      for (const item of dealItems) {
+        const externalId = String(
+          item.kind === "sale"
+            ? item.payload.saleId
+            : item.payload.clientContractId
+        );
+
+        log.step(`syncDeal.${item.kind}.start`, { externalId, payload: item.payload });
+
+        try {
+          const result =
+            item.kind === "sale"
+              ? await syncSaleToHubspotDeal(
+                  tenantId,
+                  hubspotAccount,
+                  settings,
+                  item.payload
+                )
+              : await syncContractToHubspotDeal(
+                  tenantId,
+                  hubspotAccount,
+                  mindbodyAccount,
+                  settings,
+                  item.payload
+                );
+
+          processed++;
+          await log.record(`syncDeal.${item.kind}`, "success", {
+            sourceId: externalId,
+            targetId: result.dealId,
+          });
+        } catch (e) {
+          failed++;
+          await log.fail(`syncDeal.${item.kind}`, e, externalId);
+        }
       }
     }
+
+    const status =
+      failed > 0 ? (processed > 0 ? "partial" : "failed") : "completed";
+
+    log.step("runTestSync.complete", { processed, failed, status });
+    await finishRun(status, processed, failed);
+
+    return runId;
+  } catch (e) {
+    if (!runCompleted) {
+      await log.fail("runTestSync", e);
+      await finishRun("failed", processed, Math.max(failed, 1));
+    }
+    throw e;
   }
-
-  const status =
-    failed > 0 ? (processed > 0 ? "partial" : "failed") : "completed";
-
-  log.step("runTestSync.complete", { processed, failed, status });
-
-  await completeSyncRun(runId, status, processed, failed);
-
-  return runId;
 }

@@ -1,4 +1,5 @@
-import { after, NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { runInBackground } from "@/lib/background";
 import { getSession } from "@/lib/auth/session";
 import { dispatchTestSync } from "@/lib/inngest/dispatch";
 import { TEST_SYNC_RECORD_LIMIT } from "@/lib/sync/test-sync";
@@ -21,13 +22,7 @@ export async function POST(
     const body = (await request.json()) as { entityType?: EntityType };
     const entityType = body.entityType ?? "contact";
 
-    after(async () => {
-      try {
-        await dispatchTestSync(tenantId, entityType);
-      } catch (e) {
-        console.error("[test-sync] background run failed:", e);
-      }
-    });
+    runInBackground(dispatchTestSync(tenantId, entityType));
 
     return NextResponse.json({
       ok: true,

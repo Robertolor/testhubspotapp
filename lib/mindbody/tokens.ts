@@ -25,6 +25,7 @@ export async function issueMindbodyUserToken(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ Username: username, Password: password }),
+    signal: AbortSignal.timeout(30_000),
   });
 
   if (!res.ok) {

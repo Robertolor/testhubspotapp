@@ -95,6 +95,7 @@ export async function mindbodyRequest(
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
+    signal: AbortSignal.timeout(30_000),
   });
 }
 
