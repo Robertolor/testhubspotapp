@@ -11,6 +11,9 @@ export default async function SettingsPage() {
       <p className="mt-1 text-slate-600">
         Manage Mindbody credentials and sync direction per entity.
       </p>
+      <p className="mt-1 font-mono text-xs text-slate-400">
+        Tenant {session.tenantId}
+      </p>
       <div className="mt-6">
         <SettingsForm tenantId={session.tenantId} />
       </div>
