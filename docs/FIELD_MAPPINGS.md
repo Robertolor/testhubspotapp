@@ -330,8 +330,12 @@ Wire into `applyContactMappings` and later `applyDealMappings`.
 #### Step 3.3 — Display saved mappings
 - **Build:** Show current rows from step 1.4; system rows visually locked
 - **Verify:**
-  - [ ] Default mappings appear (email↔Email, etc.)
-  - [ ] Locked rows cannot be removed in UI
+  - [ ] Contacts: 5 rows (email↔Email, firstname↔FirstName, …)
+  - [ ] `email` and `mindbody_client_id` show **System** lock badge
+  - [ ] No remove button on system rows (read-only)
+  - [ ] Deals: 4 default rows visible
+  - [ ] `npm run typecheck` passes
+- **Status:** Implemented — pending preview verify
 
 ---
 
@@ -396,7 +400,8 @@ Wire into `applyContactMappings` and later `applyDealMappings`.
 - [x] **2.1** DB migration
 - [x] **2.2** Validation module
 - [x] **3.1** Mapping page shell
-- [ ] **3.2–3.3** Catalogs + saved mappings UI
+- [x] **3.2** Catalogs UI
+- [ ] **3.3** Saved mappings UI
 - [ ] **4.1–4.2** Save + editable UI
 - [ ] **5.1–5.2** Transform + contact sync
 - [ ] **6.x** Deals
