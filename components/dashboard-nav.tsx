@@ -7,11 +7,19 @@ import { cn } from "@/lib/utils";
 const links = [
   { href: "/setup", label: "Setup" },
   { href: "/settings", label: "Settings" },
+  { href: "/settings/mappings", label: "Mappings" },
   { href: "/reports", label: "Reports" },
 ];
 
 export function DashboardNav() {
   const pathname = usePathname();
+
+  function isActive(href: string) {
+    if (href === "/settings") {
+      return pathname === "/settings";
+    }
+    return pathname === href || pathname.startsWith(`${href}/`);
+  }
 
   return (
     <nav className="flex gap-1 border-b border-slate-200 pb-4">
@@ -21,7 +29,7 @@ export function DashboardNav() {
           href={link.href}
           className={cn(
             "rounded-lg px-4 py-2 text-sm font-medium transition-colors",
-            pathname === link.href || pathname.startsWith(`${link.href}/`)
+            isActive(link.href)
               ? "bg-teal-50 text-teal-800"
               : "text-slate-600 hover:bg-slate-100"
           )}

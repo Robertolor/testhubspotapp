@@ -309,10 +309,14 @@ Wire into `applyContactMappings` and later `applyDealMappings`.
 ### Phase C — UI (read-only first)
 
 #### Step 3.1 — Mapping page shell
-- **Build:** `/settings/mappings` or section on Settings — object tabs, loading states
+- **Build:** `/settings/mappings` — object tabs, loading states
 - **Verify:**
   - [ ] Page loads when logged in; redirects when not
-  - [ ] Shows “Contact mappings” heading, no errors in console
+  - [ ] Nav **Mappings** tab → `/settings/mappings`
+  - [ ] Shows **Contact mappings** / **Deal mappings** heading per tab
+  - [ ] Tab switch shows loading skeleton briefly
+  - [ ] `npm run typecheck` passes
+- **Status:** Implemented — pending preview verify
 
 #### Step 3.2 — Display catalogs (read-only lists)
 - **Build:** Fetch both catalog APIs; render searchable lists or disabled comboboxes
