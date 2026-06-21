@@ -264,11 +264,12 @@ Wire into `applyContactMappings` and later `applyDealMappings`.
 #### Step 1.3 — Mindbody contact field catalog API
 - **Build:** `GET /api/tenants/[tenantId]/mapping/catalog/mindbody?entity=contact`
 - **Verify:**
-  - [ ] Returns standard fields (`Email`, `FirstName`, …) with `key` + `label` + `type`
-  - [ ] Returns custom fields from `GET /client/customclientfields` as `custom:{id}`
-  - [ ] Returns nested fields (`HomeLocation.Id`, …)
+  - [x] Returns standard fields (`Email`, `FirstName`, …) with `key` + `label` + `type`
+  - [x] Returns custom fields from `GET /client/customclientfields` as `custom:{id}`
+  - [x] Returns nested fields (`HomeLocation.Id`, …)
   - [ ] Mindbody not configured → clear error (`400` or `422`)
-  - [ ] `npm run typecheck` passes
+  - [x] `npm run typecheck` passes
+- **Status:** ✅ Verified on preview (2026-06-04) — 32 standard, 3 nested, 17 custom fields (e.g. `custom:3` Contract Canceled, `custom:1` Employer)
 
 #### Step 1.4 — List saved mappings API
 - **Build:** `GET /api/tenants/[tenantId]/mapping/fields?entity=contact`
@@ -375,7 +376,7 @@ Wire into `applyContactMappings` and later `applyDealMappings`.
 
 - [x] **1.1** HubSpot contact catalog API
 - [x] **1.2** HubSpot deal catalog API
-- [ ] **1.3** Mindbody contact catalog API
+- [x] **1.3** Mindbody contact catalog API
 - [ ] **1.4** List saved mappings API
 - [ ] **2.1** DB migration
 - [ ] **2.2** Validation module
@@ -391,6 +392,7 @@ Wire into `applyContactMappings` and later `applyDealMappings`.
 
 | Date | Change |
 |------|--------|
+| 2026-06-04 | **Step 1.3 verified** — Mindbody contact catalog: standard + nested (`HomeLocation.*`) + 17 custom fields (`custom:1` Employer, `custom:20` BMR, …). |
 | 2026-06-19 | **Step 1.2 verified** — HubSpot deal catalog (`mindbody_sale_id`, `dealname`, `amount`, `deal_source`, …). |
 | 2026-06-19 | **Step 1.1 verified** on preview — HubSpot contact catalog API returns full property list. |
 | 2026-06-12 | **Step 1.1:** HubSpot property catalog API implemented. Preview OAuth cookie fix (`4c42d1b`). |
