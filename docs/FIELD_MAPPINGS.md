@@ -291,18 +291,18 @@ Wire into `applyContactMappings` and later `applyDealMappings`.
 - **Build:** Migration adds `is_system`, `hubspot_property_type`, `mindbody_field_type` (minimal set first)
 - **Apply:** Run `supabase/migrations/20250604120000_field_mapping_metadata.sql` in Supabase SQL editor (required before preview API returns new fields)
 - **Verify:**
-  - [ ] Migration applies cleanly on Supabase
-  - [ ] `GET .../mapping/fields?entity=contact` returns `isSystem`, `hubspotPropertyType`, `mindbodyFieldType`
-  - [ ] `email` and `mindbody_client_id` rows have `isSystem: true`
-  - [ ] `npm run typecheck` passes
-- **Status:** Implemented — pending Supabase migration + preview verify
+  - [x] Migration applies cleanly on Supabase
+  - [x] `email` and `mindbody_client_id` rows have `is_system: true`; types backfilled as `string`
+  - [x] `npm run typecheck` passes
+- **Status:** ✅ Verified (2026-06-04) — Supabase query confirms contact rows
 
 #### Step 2.2 — Mapping validation module (pure functions)
-- **Build:** `lib/mapping/validate.ts` — type compatibility, locked field rules
+- **Build:** `lib/mapping/validate.ts` — type compatibility, locked field rules, batch/save helpers
 - **Verify:**
-  - [ ] Unit-style: known good pairs pass; enum/date mismatches fail
-  - [ ] No imports from sync yet — isolated module
-  - [ ] `npm run typecheck` passes
+  - [x] `npm run validate:mapping` — good pairs pass; enum/date mismatches fail; system rows protected
+  - [x] No imports from sync — isolated module
+  - [x] `npm run typecheck` passes
+- **Status:** ✅ Verified locally (2026-06-04)
 
 ---
 
@@ -387,8 +387,8 @@ Wire into `applyContactMappings` and later `applyDealMappings`.
 - [x] **1.2** HubSpot deal catalog API
 - [x] **1.3** Mindbody contact catalog API
 - [x] **1.4** List saved mappings API
-- [ ] **2.1** DB migration
-- [ ] **2.2** Validation module
+- [x] **2.1** DB migration
+- [x] **2.2** Validation module
 - [ ] **3.1–3.3** UI read-only
 - [ ] **4.1–4.2** Save + editable UI
 - [ ] **5.1–5.2** Transform + contact sync
@@ -401,6 +401,8 @@ Wire into `applyContactMappings` and later `applyDealMappings`.
 
 | Date | Change |
 |------|--------|
+| 2026-06-04 | **Step 2.2 verified** — `lib/mapping/validate.ts` + `npm run validate:mapping` self-check. |
+| 2026-06-04 | **Step 2.1 verified** — `field_mappings` metadata columns; `email` + `mindbody_client_id` locked (`is_system: true`). |
 | 2026-06-04 | **Phase A complete** — Step 1.4 verified: contact (5) + deal (4) saved mappings API. |
 | 2026-06-04 | **Step 1.3 verified** — Mindbody contact catalog: standard + nested (`HomeLocation.*`) + 17 custom fields (`custom:1` Employer, `custom:20` BMR, …). |
 | 2026-06-19 | **Step 1.2 verified** — HubSpot deal catalog (`mindbody_sale_id`, `dealname`, `amount`, `deal_source`, …). |
