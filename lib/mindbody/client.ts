@@ -193,6 +193,31 @@ export async function addOrUpdateMindbodyClient(
   return data.Client?.Id ?? client.Id ?? "";
 }
 
+export interface MindbodyCustomClientFieldDefinition {
+  Id: number;
+  Name: string;
+  DataType?: string;
+}
+
+export async function listMindbodyCustomClientFieldDefinitions(
+  account: MindbodyAccount
+): Promise<MindbodyCustomClientFieldDefinition[]> {
+  const res = await mindbodyRequestForAccount(
+    account,
+    "GET",
+    "/client/customclientfields"
+  );
+  if (!res.ok) {
+    throw new Error(
+      `Mindbody custom client fields failed: ${await res.text()}`
+    );
+  }
+  const data = (await res.json()) as {
+    CustomClientFields?: MindbodyCustomClientFieldDefinition[];
+  };
+  return data.CustomClientFields ?? [];
+}
+
 export async function fetchClientContracts(
   account: MindbodyAccount,
   clientId: string

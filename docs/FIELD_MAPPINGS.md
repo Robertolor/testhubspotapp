@@ -252,13 +252,14 @@ Wire into `applyContactMappings` and later `applyDealMappings`.
   - [ ] Logged out → `401`
   - [ ] `npm run typecheck` passes
 - **Does NOT change:** sync, settings save, UI
-- **Status:** ✅ Implemented — pending manual verify on Vercel/local
+- **Status:** ✅ Verified on preview (2026-06-19) — returns `email`, `firstname`, `mindbody_*`, `readOnly`, types, etc.
 
 #### Step 1.2 — HubSpot deal properties catalog API
 - **Build:** Same route, `?object=deals`
 - **Verify:**
-  - [ ] Returns `dealname`, `amount`, `mindbody_sale_id`, etc.
-  - [ ] `?object=invalid` → `400`
+  - [x] Returns `dealname`, `amount`, `mindbody_sale_id`, etc.
+  - [x] `?object=invalid` → `400`
+- **Status:** ✅ Verified on preview (2026-06-19)
 
 #### Step 1.3 — Mindbody contact field catalog API
 - **Build:** `GET /api/tenants/[tenantId]/mapping/catalog/mindbody?entity=contact`
@@ -373,7 +374,7 @@ Wire into `applyContactMappings` and later `applyDealMappings`.
 ## Build order (legacy checklist — see incremental plan above)
 
 - [x] **1.1** HubSpot contact catalog API
-- [ ] **1.2** HubSpot deal catalog API
+- [x] **1.2** HubSpot deal catalog API
 - [ ] **1.3** Mindbody contact catalog API
 - [ ] **1.4** List saved mappings API
 - [ ] **2.1** DB migration
@@ -390,7 +391,9 @@ Wire into `applyContactMappings` and later `applyDealMappings`.
 
 | Date | Change |
 |------|--------|
-| 2026-06-12 | **Step 1.1:** HubSpot property catalog API (`GET .../mapping/catalog/hubspot?object=contacts\|deals`). |
+| 2026-06-19 | **Step 1.2 verified** — HubSpot deal catalog (`mindbody_sale_id`, `dealname`, `amount`, `deal_source`, …). |
+| 2026-06-19 | **Step 1.1 verified** on preview — HubSpot contact catalog API returns full property list. |
+| 2026-06-12 | **Step 1.1:** HubSpot property catalog API implemented. Preview OAuth cookie fix (`4c42d1b`). |
 | 2026-06-12 | Agreed incremental plan with per-step verification. Phase A starts at step 1.1 (HS contact catalog API). |
 | 2026-06-12 | Initial design doc. Branch `feature/field-mappings` created. E2E on `main`: contacts (partial) + deals (6/6) validated. |
 | | Stashed locally (not on branch): logging UI improvements for Reports run detail |
