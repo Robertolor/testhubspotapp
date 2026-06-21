@@ -376,7 +376,8 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
       <Card className="mt-6">
         <CardTitle>{heading}</CardTitle>
         <p className="mt-1 text-sm text-slate-500">
-          Edit field pairs below, then save. System mappings stay locked.
+          Use <strong>+ Add mapping</strong> and <strong>Remove</strong> on
+          non-system rows, then save. Email and Client ID stay locked.
         </p>
 
         {loading ? (

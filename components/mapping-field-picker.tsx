@@ -66,7 +66,7 @@ export function MappingFieldPicker({
         }}
         disabled={disabled}
         placeholder={placeholder}
-        className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 disabled:bg-slate-100"
+        className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 ring-teal-600/20 placeholder:text-slate-400 focus:border-teal-600 focus:outline-none focus:ring-2 disabled:bg-slate-100"
       />
       {selected && !open ? (
         <p className="mt-1 truncate font-mono text-xs text-slate-500">

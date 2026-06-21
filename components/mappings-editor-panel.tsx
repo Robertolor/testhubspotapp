@@ -73,32 +73,35 @@ export function MappingsEditorPanel({
   }
 
   return (
-    <div className="mt-6 rounded-lg border border-slate-200 bg-slate-50/50">
-      <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h3 className="text-sm font-semibold text-slate-900">
-            Current mappings
-          </h3>
-          <p className="mt-0.5 text-xs text-slate-500">
-            System rows are required. Other rows can be added or removed, then
-            saved.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="secondary" onClick={onAddRow}>
-            Add mapping
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={onCancel}
-            disabled={!dirty || saving}
-          >
-            Cancel
-          </Button>
-          <Button type="button" onClick={onSave} disabled={!saveEnabled || saving}>
-            {saving ? "Saving…" : "Save mappings"}
-          </Button>
+    <div className="mt-6 overflow-hidden rounded-lg border border-slate-200 bg-slate-50/50">
+      <div className="border-b border-slate-200 bg-white px-4 py-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900">
+              Current mappings
+            </h3>
+            <p className="mt-1 text-sm text-slate-600">
+              Use <strong>Add mapping</strong> to create a pair, click field
+              boxes to change non-system rows, then <strong>Save mappings</strong>.
+              System rows (e.g. Email) cannot be removed.
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Button type="button" variant="secondary" onClick={onAddRow}>
+              + Add mapping
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onCancel}
+              disabled={!dirty || saving}
+            >
+              Cancel
+            </Button>
+            <Button type="button" onClick={onSave} disabled={!saveEnabled || saving}>
+              {saving ? "Saving…" : "Save mappings"}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -161,7 +164,7 @@ export function MappingsEditorPanel({
                   />
                 </div>
               ) : (
-                <div className="grid min-w-0 flex-1 gap-3 lg:grid-cols-[1fr_auto_1fr] lg:items-start">
+                <div className="grid min-w-0 flex-1 gap-3 rounded-lg border border-dashed border-slate-300 bg-white p-3 lg:grid-cols-[1fr_auto_1fr] lg:items-start">
                   <MappingFieldPicker
                     label="HubSpot"
                     value={row.hubspotProperty}
@@ -194,7 +197,7 @@ export function MappingsEditorPanel({
                   <button
                     type="button"
                     onClick={() => removeRow(row.id)}
-                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-white"
+                    className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50"
                   >
                     Remove
                   </button>
@@ -204,6 +207,14 @@ export function MappingsEditorPanel({
           ))}
         </ul>
       )}
+
+      {!loading && !loadError ? (
+        <div className="border-t border-slate-200 bg-white px-4 py-3">
+          <Button type="button" variant="secondary" onClick={onAddRow}>
+            + Add mapping
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }
