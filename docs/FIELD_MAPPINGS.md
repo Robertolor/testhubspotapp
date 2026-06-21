@@ -321,21 +321,23 @@ Wire into `applyContactMappings` and later `applyDealMappings`.
 #### Step 3.2 — Display catalogs (read-only lists)
 - **Build:** Fetch both catalog APIs; render searchable lists
 - **Verify:**
-  - [ ] Contacts tab: HubSpot 50+ properties, search filters client-side
-  - [ ] Contacts tab: Mindbody standard + custom fields with types/labels
-  - [ ] Deals tab: HubSpot deal properties; Mindbody placeholder message
-  - [ ] `npm run typecheck` passes
-- **Status:** Implemented — pending preview verify
+  - [x] Contacts tab: HubSpot 50+ properties, search filters client-side
+  - [x] Contacts tab: Mindbody standard + custom fields with types/labels
+  - [x] Deals tab: HubSpot deal properties; Mindbody placeholder message
+  - [x] `npm run typecheck` passes
+- **Status:** ✅ Verified on preview (2026-06-04)
 
 #### Step 3.3 — Display saved mappings
 - **Build:** Show current rows from step 1.4; system rows visually locked
 - **Verify:**
-  - [ ] Contacts: 5 rows (email↔Email, firstname↔FirstName, …)
-  - [ ] `email` and `mindbody_client_id` show **System** lock badge
-  - [ ] No remove button on system rows (read-only)
-  - [ ] Deals: 4 default rows visible
-  - [ ] `npm run typecheck` passes
-- **Status:** Implemented — pending preview verify
+  - [x] Contacts: 5 rows (email↔Email, firstname↔FirstName, …)
+  - [x] `email` and `mindbody_client_id` show **System** lock badge
+  - [x] No remove button on system rows (read-only)
+  - [x] Deals: 4 default rows visible
+  - [x] `npm run typecheck` passes
+- **Status:** ✅ Verified on preview (2026-06-04)
+
+**Phase C complete** — read-only mappings UI (catalogs + saved rows).
 
 ---
 
@@ -345,16 +347,20 @@ Wire into `applyContactMappings` and later `applyDealMappings`.
 - **Build:** `PUT /api/tenants/[tenantId]/mapping/fields` with validation
 - **Verify:**
   - [ ] Save valid mapping → persists in Supabase
-  - [ ] Remove system mapping → rejected
+  - [ ] Remove system mapping → rejected (`400` + errors)
   - [ ] Incompatible types → `400` with per-row errors
   - [ ] Reload page → shows saved state
+  - [ ] `npm run typecheck` passes
+- **Status:** Implemented — pending preview verify
 
 #### Step 4.2 — Editable UI (add/remove rows, save button)
-- **Build:** Wire comboboxes + save to PUT endpoint
+- **Build:** Searchable pickers, add/remove rows, save/cancel; catalogs in collapsible browse section
 - **Verify:**
-  - [ ] Add `firstname` ↔ `FirstName`, save, refresh → still there
-  - [ ] Invalid pair shows error message
+  - [ ] Add mapping via pickers, save, refresh → persists
+  - [ ] Invalid pair shows error from API
+  - [ ] System rows stay locked (no remove)
   - [ ] **Contact test sync still works** (may still use `String()` — expected until Phase E)
+- **Status:** Implemented — pending preview verify
 
 ---
 
@@ -401,8 +407,9 @@ Wire into `applyContactMappings` and later `applyDealMappings`.
 - [x] **2.2** Validation module
 - [x] **3.1** Mapping page shell
 - [x] **3.2** Catalogs UI
-- [ ] **3.3** Saved mappings UI
-- [ ] **4.1–4.2** Save + editable UI
+- [x] **3.3** Saved mappings UI
+- [ ] **4.1** Save mappings API
+- [ ] **4.2** Editable UI
 - [ ] **5.1–5.2** Transform + contact sync
 - [ ] **6.x** Deals
 - [ ] **7.x** Create HS property / reverse / backfill
@@ -413,6 +420,7 @@ Wire into `applyContactMappings` and later `applyDealMappings`.
 
 | Date | Change |
 |------|--------|
+| 2026-06-04 | **Phase C complete** — Steps 3.2–3.3 verified: catalogs + saved mappings with System locks. |
 | 2026-06-04 | **Step 3.1 verified** — `/settings/mappings` shell with Contacts/Deals tabs. |
 | 2026-06-04 | **Step 2.2 verified** — `lib/mapping/validate.ts` + `npm run validate:mapping` self-check. |
 | 2026-06-04 | **Step 2.1 verified** — `field_mappings` metadata columns; `email` + `mindbody_client_id` locked (`is_system: true`). |
