@@ -311,19 +311,21 @@ Wire into `applyContactMappings` and later `applyDealMappings`.
 #### Step 3.1 — Mapping page shell
 - **Build:** `/settings/mappings` — object tabs, loading states
 - **Verify:**
-  - [ ] Page loads when logged in; redirects when not
-  - [ ] Nav **Mappings** tab → `/settings/mappings`
-  - [ ] Shows **Contact mappings** / **Deal mappings** heading per tab
-  - [ ] Tab switch shows loading skeleton briefly
-  - [ ] `npm run typecheck` passes
-- **Status:** Implemented — pending preview verify
+  - [x] Page loads when logged in; redirects when not
+  - [x] Nav **Mappings** tab → `/settings/mappings`
+  - [x] Shows **Contact mappings** / **Deal mappings** heading per tab
+  - [x] Tab switch shows loading skeleton briefly
+  - [x] `npm run typecheck` passes
+- **Status:** ✅ Verified on preview (2026-06-04)
 
 #### Step 3.2 — Display catalogs (read-only lists)
-- **Build:** Fetch both catalog APIs; render searchable lists or disabled comboboxes
+- **Build:** Fetch both catalog APIs; render searchable lists
 - **Verify:**
-  - [ ] HubSpot side shows 50+ properties, search filters client-side
-  - [ ] Mindbody side shows standard + custom fields
-  - [ ] Types/labels visible in UI
+  - [ ] Contacts tab: HubSpot 50+ properties, search filters client-side
+  - [ ] Contacts tab: Mindbody standard + custom fields with types/labels
+  - [ ] Deals tab: HubSpot deal properties; Mindbody placeholder message
+  - [ ] `npm run typecheck` passes
+- **Status:** Implemented — pending preview verify
 
 #### Step 3.3 — Display saved mappings
 - **Build:** Show current rows from step 1.4; system rows visually locked
@@ -393,7 +395,8 @@ Wire into `applyContactMappings` and later `applyDealMappings`.
 - [x] **1.4** List saved mappings API
 - [x] **2.1** DB migration
 - [x] **2.2** Validation module
-- [ ] **3.1–3.3** UI read-only
+- [x] **3.1** Mapping page shell
+- [ ] **3.2–3.3** Catalogs + saved mappings UI
 - [ ] **4.1–4.2** Save + editable UI
 - [ ] **5.1–5.2** Transform + contact sync
 - [ ] **6.x** Deals
@@ -405,6 +408,7 @@ Wire into `applyContactMappings` and later `applyDealMappings`.
 
 | Date | Change |
 |------|--------|
+| 2026-06-04 | **Step 3.1 verified** — `/settings/mappings` shell with Contacts/Deals tabs. |
 | 2026-06-04 | **Step 2.2 verified** — `lib/mapping/validate.ts` + `npm run validate:mapping` self-check. |
 | 2026-06-04 | **Step 2.1 verified** — `field_mappings` metadata columns; `email` + `mindbody_client_id` locked (`is_system: true`). |
 | 2026-06-04 | **Phase A complete** — Step 1.4 verified: contact (5) + deal (4) saved mappings API. |
