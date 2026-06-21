@@ -1,25 +1,93 @@
 import { getSupabase } from "@/lib/db/client";
 import type { EntityType, FieldMapping } from "@/lib/db/types";
 
-export const DEFAULT_CONTACT_MAPPINGS: Omit<
-  FieldMapping,
-  "id" | "tenant_id" | "created_at"
->[] = [
-  { entity_type: "contact", hubspot_property: "email", mindbody_field: "Email", is_custom: false },
-  { entity_type: "contact", hubspot_property: "firstname", mindbody_field: "FirstName", is_custom: false },
-  { entity_type: "contact", hubspot_property: "lastname", mindbody_field: "LastName", is_custom: false },
-  { entity_type: "contact", hubspot_property: "phone", mindbody_field: "MobilePhone", is_custom: false },
-  { entity_type: "contact", hubspot_property: "mindbody_client_id", mindbody_field: "Id", is_custom: true },
+type DefaultFieldMapping = Omit<FieldMapping, "id" | "tenant_id" | "created_at">;
+
+export const DEFAULT_CONTACT_MAPPINGS: DefaultFieldMapping[] = [
+  {
+    entity_type: "contact",
+    hubspot_property: "email",
+    mindbody_field: "Email",
+    is_custom: false,
+    is_system: true,
+    hubspot_property_type: "string",
+    mindbody_field_type: "string",
+  },
+  {
+    entity_type: "contact",
+    hubspot_property: "firstname",
+    mindbody_field: "FirstName",
+    is_custom: false,
+    is_system: false,
+    hubspot_property_type: "string",
+    mindbody_field_type: "string",
+  },
+  {
+    entity_type: "contact",
+    hubspot_property: "lastname",
+    mindbody_field: "LastName",
+    is_custom: false,
+    is_system: false,
+    hubspot_property_type: "string",
+    mindbody_field_type: "string",
+  },
+  {
+    entity_type: "contact",
+    hubspot_property: "phone",
+    mindbody_field: "MobilePhone",
+    is_custom: false,
+    is_system: false,
+    hubspot_property_type: "string",
+    mindbody_field_type: "string",
+  },
+  {
+    entity_type: "contact",
+    hubspot_property: "mindbody_client_id",
+    mindbody_field: "Id",
+    is_custom: true,
+    is_system: true,
+    hubspot_property_type: "string",
+    mindbody_field_type: "string",
+  },
 ];
 
-export const DEFAULT_DEAL_MAPPINGS: Omit<
-  FieldMapping,
-  "id" | "tenant_id" | "created_at"
->[] = [
-  { entity_type: "deal", hubspot_property: "dealname", mindbody_field: "contractName", is_custom: false },
-  { entity_type: "deal", hubspot_property: "amount", mindbody_field: "amount", is_custom: false },
-  { entity_type: "deal", hubspot_property: "closedate", mindbody_field: "contractStartDateTime", is_custom: false },
-  { entity_type: "deal", hubspot_property: "deal_source", mindbody_field: "deal_source", is_custom: true },
+export const DEFAULT_DEAL_MAPPINGS: DefaultFieldMapping[] = [
+  {
+    entity_type: "deal",
+    hubspot_property: "dealname",
+    mindbody_field: "contractName",
+    is_custom: false,
+    is_system: false,
+    hubspot_property_type: "string",
+    mindbody_field_type: "string",
+  },
+  {
+    entity_type: "deal",
+    hubspot_property: "amount",
+    mindbody_field: "amount",
+    is_custom: false,
+    is_system: false,
+    hubspot_property_type: "number",
+    mindbody_field_type: "number",
+  },
+  {
+    entity_type: "deal",
+    hubspot_property: "closedate",
+    mindbody_field: "contractStartDateTime",
+    is_custom: false,
+    is_system: false,
+    hubspot_property_type: "datetime",
+    mindbody_field_type: "datetime",
+  },
+  {
+    entity_type: "deal",
+    hubspot_property: "deal_source",
+    mindbody_field: "deal_source",
+    is_custom: true,
+    is_system: false,
+    hubspot_property_type: "enumeration",
+    mindbody_field_type: "string",
+  },
 ];
 
 export async function seedDefaultFieldMappings(tenantId: string): Promise<void> {

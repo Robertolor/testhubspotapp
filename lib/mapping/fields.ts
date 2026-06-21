@@ -10,6 +10,9 @@ export interface FieldMappingItem {
   hubspotProperty: string;
   mindbodyField: string;
   isCustom: boolean;
+  isSystem: boolean;
+  hubspotPropertyType: string | null;
+  mindbodyFieldType: string | null;
 }
 
 export function toFieldMappingItem(row: {
@@ -17,11 +20,17 @@ export function toFieldMappingItem(row: {
   hubspot_property: string;
   mindbody_field: string;
   is_custom: boolean;
+  is_system: boolean;
+  hubspot_property_type: string | null;
+  mindbody_field_type: string | null;
 }): FieldMappingItem {
   return {
     id: row.id,
     hubspotProperty: row.hubspot_property,
     mindbodyField: row.mindbody_field,
     isCustom: row.is_custom,
+    isSystem: row.is_system,
+    hubspotPropertyType: row.hubspot_property_type,
+    mindbodyFieldType: row.mindbody_field_type,
   };
 }

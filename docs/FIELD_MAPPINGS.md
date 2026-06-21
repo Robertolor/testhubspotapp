@@ -272,10 +272,16 @@ Wire into `applyContactMappings` and later `applyDealMappings`.
 - **Status:** ✅ Verified on preview (2026-06-04) — 32 standard, 3 nested, 17 custom fields (e.g. `custom:3` Contract Canceled, `custom:1` Employer)
 
 #### Step 1.4 — List saved mappings API
-- **Build:** `GET /api/tenants/[tenantId]/mapping/fields?entity=contact`
+- **Build:** `GET /api/tenants/[tenantId]/mapping/fields?entity=contact|deal`
 - **Verify:**
-  - [ ] Returns current `field_mappings` rows for tenant + default seed data
-  - [ ] Matches what’s in Supabase `field_mappings` table
+  - [x] Returns current `field_mappings` rows for tenant (contact: 5 rows, deal: 4 rows)
+  - [x] `?entity=deal` returns dealname, amount, closedate, deal_source
+  - [ ] `?entity=invalid` → `400`
+  - [x] Matches default seed data in Supabase `field_mappings` table
+  - [x] `npm run typecheck` passes
+- **Status:** ✅ Verified on preview (2026-06-04)
+
+**Phase A complete** — all read-only catalog + mappings list APIs verified.
 
 ---
 
@@ -283,10 +289,13 @@ Wire into `applyContactMappings` and later `applyDealMappings`.
 
 #### Step 2.1 — DB migration for mapping metadata
 - **Build:** Migration adds `is_system`, `hubspot_property_type`, `mindbody_field_type` (minimal set first)
+- **Apply:** Run `supabase/migrations/20250604120000_field_mapping_metadata.sql` in Supabase SQL editor (required before preview API returns new fields)
 - **Verify:**
   - [ ] Migration applies cleanly on Supabase
-  - [ ] Existing rows still readable; defaults sensible
-  - [ ] Seed marks `email`/`Id` mappings as `is_system: true`
+  - [ ] `GET .../mapping/fields?entity=contact` returns `isSystem`, `hubspotPropertyType`, `mindbodyFieldType`
+  - [ ] `email` and `mindbody_client_id` rows have `isSystem: true`
+  - [ ] `npm run typecheck` passes
+- **Status:** Implemented — pending Supabase migration + preview verify
 
 #### Step 2.2 — Mapping validation module (pure functions)
 - **Build:** `lib/mapping/validate.ts` — type compatibility, locked field rules
@@ -377,7 +386,7 @@ Wire into `applyContactMappings` and later `applyDealMappings`.
 - [x] **1.1** HubSpot contact catalog API
 - [x] **1.2** HubSpot deal catalog API
 - [x] **1.3** Mindbody contact catalog API
-- [ ] **1.4** List saved mappings API
+- [x] **1.4** List saved mappings API
 - [ ] **2.1** DB migration
 - [ ] **2.2** Validation module
 - [ ] **3.1–3.3** UI read-only
@@ -392,6 +401,7 @@ Wire into `applyContactMappings` and later `applyDealMappings`.
 
 | Date | Change |
 |------|--------|
+| 2026-06-04 | **Phase A complete** — Step 1.4 verified: contact (5) + deal (4) saved mappings API. |
 | 2026-06-04 | **Step 1.3 verified** — Mindbody contact catalog: standard + nested (`HomeLocation.*`) + 17 custom fields (`custom:1` Employer, `custom:20` BMR, …). |
 | 2026-06-19 | **Step 1.2 verified** — HubSpot deal catalog (`mindbody_sale_id`, `dealname`, `amount`, `deal_source`, …). |
 | 2026-06-19 | **Step 1.1 verified** on preview — HubSpot contact catalog API returns full property list. |

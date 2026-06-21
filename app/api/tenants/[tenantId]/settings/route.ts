@@ -48,7 +48,9 @@ export async function GET(
 
   const { data: mappings } = await supabase
     .from("field_mappings")
-    .select("id, entity_type, hubspot_property, mindbody_field, is_custom")
+    .select(
+      "id, entity_type, hubspot_property, mindbody_field, is_custom, is_system, hubspot_property_type, mindbody_field_type"
+    )
     .eq("tenant_id", tenantId);
 
   return NextResponse.json({

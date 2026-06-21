@@ -58,6 +58,9 @@ export interface FieldMapping {
   hubspot_property: string;
   mindbody_field: string;
   is_custom: boolean;
+  is_system: boolean;
+  hubspot_property_type: string | null;
+  mindbody_field_type: string | null;
 }
 
 export interface EntityMapping {
