@@ -1,8 +1,9 @@
 # Field mappings — living design doc
 
 > **Branch:** `feature/field-mappings` (off stable `main` @ `6a277c7`)  
-> **Last updated:** 2026-06-12  
-> **Status:** Design / investigation — no mapping UI or catalog APIs yet
+> **Last updated:** 2026-06-04  
+> **Status:** Phases **A–E complete** on feature branch. See **[FIELD_MAPPINGS_STATUS.md](./FIELD_MAPPINGS_STATUS.md)** for merge summary.  
+> **Next:** Phase F (deals catalog + sync).
 
 Use this file as the source of truth for the custom property-mapping feature. Update sections as work lands.
 
@@ -25,16 +26,18 @@ Let each tenant map **Mindbody fields → HubSpot properties** (and later revers
 
 ## What exists today
 
+> **Snapshot:** Phases A–D on `feature/field-mappings`. Full summary: [FIELD_MAPPINGS_STATUS.md](./FIELD_MAPPINGS_STATUS.md).
+
 | Layer | State |
 |-------|--------|
-| **DB** | `field_mappings` table: `tenant_id`, `entity_type`, `hubspot_property`, `mindbody_field`, `is_custom` |
-| **Seed** | `DEFAULT_CONTACT_MAPPINGS` / `DEFAULT_DEAL_MAPPINGS` on OAuth install |
-| **Settings API** | `GET/PUT /api/tenants/[tenantId]/settings` reads/writes `fieldMappings` |
-| **Contact sync** | Uses `getFieldMappings` + `applyContactMappings` (MB→HS and HS→MB) |
-| **Deal sync** | **Hardcoded** in `lib/sync/deals.ts` — ignores `field_mappings` |
-| **Settings UI** | No mapping UI |
-| **Catalog APIs** | None |
-| **HubSpot props** | Fixed `mindbody_*` bootstrap in `lib/hubspot/properties.ts` |
+| **DB** | `field_mappings` + `is_system`, `hubspot_property_type`, `mindbody_field_type` (migration `20250604120000`) |
+| **Catalog APIs** | HubSpot contacts/deals; Mindbody contacts |
+| **Mappings API** | `GET/PUT .../mapping/fields` |
+| **Mappings UI** | `/settings/mappings` — browse, add, remove, save |
+| **Validation** | `lib/mapping/validate.ts` on save |
+| **Contact sync** | Uses mappings with transform layer (flat, nested, custom fields) |
+| **Deal sync** | **Hardcoded** — ignores saved deal mappings |
+| **Settings UI** | Credentials + sync direction; mappings on separate page |
 
 ### Key files
 
@@ -346,21 +349,25 @@ Wire into `applyContactMappings` and later `applyDealMappings`.
 #### Step 4.1 — Save mappings API
 - **Build:** `PUT /api/tenants/[tenantId]/mapping/fields` with validation
 - **Verify:**
-  - [ ] Save valid mapping → persists in Supabase
-  - [ ] Remove system mapping → rejected (`400` + errors)
-  - [ ] Incompatible types → `400` with per-row errors
-  - [ ] Reload page → shows saved state
-  - [ ] `npm run typecheck` passes
-- **Status:** Implemented — pending preview verify
+  - [x] Save valid mapping → persists in Supabase (e.g. `mindbody_site_id` ↔ `AccountBalance`)
+  - [x] Type coercion warnings returned (number → string)
+  - [ ] Remove system mapping → rejected (`400` + errors) — not user-tested
+  - [ ] Incompatible types → `400` with per-row errors — not user-tested
+  - [x] Reload page → shows saved state
+  - [x] `npm run typecheck` passes
+- **Status:** ✅ Verified on preview (2026-06-04)
 
 #### Step 4.2 — Editable UI (add/remove rows, save button)
 - **Build:** Searchable pickers, add/remove rows, save/cancel; catalogs in collapsible browse section
 - **Verify:**
-  - [ ] Add mapping via pickers, save, refresh → persists
-  - [ ] Invalid pair shows error from API
-  - [ ] System rows stay locked (no remove)
-  - [ ] **Contact test sync still works** (may still use `String()` — expected until Phase E)
-- **Status:** Implemented — pending preview verify
+  - [x] Add mapping via pickers, save, refresh → persists
+  - [x] Remove non-system row + save → persists after refresh
+  - [x] System rows stay locked (no remove on Email / Client ID)
+  - [ ] Invalid pair shows error from API — not user-tested
+  - [ ] **Contact test sync still works** — not user-tested (expected until Phase E transform)
+- **Status:** ✅ Verified on preview (2026-06-04)
+
+**Phase D complete** — save API + editable mapping UI.
 
 ---
 
@@ -408,9 +415,9 @@ Wire into `applyContactMappings` and later `applyDealMappings`.
 - [x] **3.1** Mapping page shell
 - [x] **3.2** Catalogs UI
 - [x] **3.3** Saved mappings UI
-- [ ] **4.1** Save mappings API
-- [ ] **4.2** Editable UI
-- [ ] **5.1–5.2** Transform + contact sync
+- [x] **4.1** Save mappings API
+- [x] **4.2** Editable UI
+- [x] **5.1–5.2** Transform + contact sync
 - [ ] **6.x** Deals
 - [ ] **7.x** Create HS property / reverse / backfill
 
@@ -420,6 +427,8 @@ Wire into `applyContactMappings` and later `applyDealMappings`.
 
 | Date | Change |
 |------|--------|
+| 2026-06-04 | **FIELD_MAPPINGS_STATUS.md** — achievement summary for Phases A–D; Phase E deferred. |
+| 2026-06-04 | **Phase D complete** — Save/remove mappings verified on preview (steps 4.1–4.2). |
 | 2026-06-04 | **Phase C complete** — Steps 3.2–3.3 verified: catalogs + saved mappings with System locks. |
 | 2026-06-04 | **Step 3.1 verified** — `/settings/mappings` shell with Contacts/Deals tabs. |
 | 2026-06-04 | **Step 2.2 verified** — `lib/mapping/validate.ts` + `npm run validate:mapping` self-check. |

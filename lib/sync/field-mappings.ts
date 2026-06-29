@@ -1,5 +1,6 @@
 import { getSupabase } from "@/lib/db/client";
 import type { EntityType, FieldMapping } from "@/lib/db/types";
+import { extractMindbodyValue, formatForHubspot, mapMindbodyFieldsToHubspot } from "@/lib/mapping/transform";
 
 type DefaultFieldMapping = Omit<FieldMapping, "id" | "tenant_id" | "created_at">;
 
@@ -123,19 +124,15 @@ export function applyContactMappings(
   siteId: number
 ): Record<string, string> {
   const props: Record<string, string> = {
+    ...mapMindbodyFieldsToHubspot(mappings, mindbody),
     mindbody_site_id: String(siteId),
     mindbody_last_synced_at: new Date().toISOString(),
   };
 
-  for (const m of mappings) {
-    const val = mindbody[m.mindbody_field];
-    if (val !== undefined && val !== null) {
-      props[m.hubspot_property] = String(val);
-    }
-  }
-
-  if (!props.phone && mindbody.HomePhone) {
-    props.phone = String(mindbody.HomePhone);
+  if (!props.phone) {
+    const homePhone = extractMindbodyValue(mindbody, "HomePhone");
+    const formatted = formatForHubspot(homePhone, "string", "string");
+    if (formatted) props.phone = formatted;
   }
 
   return props;

@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "validate:mapping": "npx --yes tsx lib/mapping/validate.self-check.ts"
+    "validate:mapping": "npx --yes tsx lib/mapping/validate.self-check.ts",
+    "validate:transform": "npx --yes tsx lib/mapping/transform.self-check.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.2",
