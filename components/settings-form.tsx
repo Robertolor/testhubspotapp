@@ -18,6 +18,7 @@ interface SettingsData {
     configured: boolean;
     staffUsername?: string;
     staffConfigured?: boolean;
+    staffPasswordConfigured?: boolean;
   };
   hubspot?: { portalId: number; hubDomain: string | null };
 }
@@ -57,18 +58,30 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
     setSaving(true);
     setMessage(null);
     try {
+      const savedStaffUsername = data?.mindbody?.staffUsername ?? "";
+      const savedSiteId = data?.mindbody?.siteId
+        ? String(data.mindbody.siteId)
+        : "";
+      const mindbodyCredentialsTouched =
+        Boolean(apiKey) ||
+        Boolean(staffPassword) ||
+        staffUsername !== savedStaffUsername ||
+        siteId !== savedSiteId;
+      const needsMindbodySetup = !data?.mindbody?.staffPasswordConfigured;
+
       const res = await fetch(`/api/tenants/${tenantId}/settings`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          mindbody: siteId
-            ? {
-                siteId: Number(siteId),
-                ...(apiKey ? { apiKey } : {}),
-                ...(staffUsername ? { staffUsername } : {}),
-                ...(staffPassword ? { staffPassword } : {}),
-              }
-            : undefined,
+          mindbody:
+            siteId && (mindbodyCredentialsTouched || needsMindbodySetup)
+              ? {
+                  siteId: Number(siteId),
+                  ...(apiKey ? { apiKey } : {}),
+                  ...(staffUsername ? { staffUsername } : {}),
+                  ...(staffPassword ? { staffPassword } : {}),
+                }
+              : undefined,
           sync: {
             contactsEnabled,
             contactsDirection,
@@ -82,6 +95,10 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
       setMessage("Settings saved.");
       setApiKey("");
       setStaffPassword("");
+      const refreshed = await fetch(`/api/tenants/${tenantId}/settings`).then(
+        (r) => r.json() as Promise<SettingsData>
+      );
+      setData(refreshed);
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Save failed");
     } finally {
@@ -148,6 +165,19 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
           Each business provides their Site ID, API key, and a staff login with
           API access permission.
         </p>
+        {data?.mindbody?.configured ? (
+          <p
+            className={`mt-2 text-sm ${
+              data.mindbody.staffPasswordConfigured
+                ? "text-teal-700"
+                : "text-amber-800"
+            }`}
+          >
+            {data.mindbody.staffPasswordConfigured
+              ? "Mindbody staff login is saved. Leave password blank unless you are changing it."
+              : "Staff password is missing — enter staff username and password, then Save settings."}
+          </p>
+        ) : null}
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <label className="block text-sm">
             <span className="font-medium text-slate-700">Site ID</span>

@@ -36,7 +36,9 @@ export async function GET(
       supabase.from("sync_settings").select("*").eq("tenant_id", tenantId).single(),
       supabase
         .from("mindbody_accounts")
-        .select("site_id, staff_username, created_at, updated_at")
+        .select(
+          "site_id, staff_username, staff_password_encrypted, created_at, updated_at"
+        )
         .eq("tenant_id", tenantId)
         .maybeSingle(),
       supabase
@@ -61,6 +63,7 @@ export async function GET(
           configured: true,
           staffUsername: mindbody.staff_username ?? undefined,
           staffConfigured: Boolean(mindbody.staff_username),
+          staffPasswordConfigured: Boolean(mindbody.staff_password_encrypted),
         }
       : { configured: false },
     hubspot: hubspot
@@ -120,8 +123,21 @@ export async function PUT(
     const existing = await getMindbodyAccountByTenant(tenantId);
 
     const siteId = body.mindbody.siteId;
+    const apiKeyInBody = body.mindbody.apiKey?.trim() ?? "";
+    const staffUsernameInBody = body.mindbody.staffUsername?.trim() ?? "";
+    const staffPasswordInBody = body.mindbody.staffPassword?.trim() ?? "";
+
+    const mindbodyFieldsTouched =
+      Boolean(apiKeyInBody) ||
+      Boolean(staffUsernameInBody) ||
+      Boolean(staffPasswordInBody) ||
+      existing?.site_id !== siteId;
+
+    if (!mindbodyFieldsTouched && existing?.api_key_encrypted) {
+      // Sync-only save — keep stored Mindbody credentials; do not re-test Mindbody.
+    } else {
     const apiKey =
-      body.mindbody.apiKey?.trim() ||
+      apiKeyInBody ||
       (existing?.api_key_encrypted
         ? decryptSecret(existing.api_key_encrypted)
         : null);
@@ -134,11 +150,11 @@ export async function PUT(
     }
 
     const staffUsername =
-      body.mindbody.staffUsername?.trim() ||
+      staffUsernameInBody ||
       existing?.staff_username ||
       null;
     const staffPassword =
-      body.mindbody.staffPassword?.trim() ||
+      staffPasswordInBody ||
       (existing?.staff_password_encrypted
         ? decryptSecret(existing.staff_password_encrypted)
         : null);
@@ -172,9 +188,9 @@ export async function PUT(
 
     const credentialsChanged =
       existing?.site_id !== siteId ||
-      Boolean(body.mindbody.apiKey) ||
-      body.mindbody.staffUsername?.trim() ||
-      body.mindbody.staffPassword?.trim();
+      Boolean(apiKeyInBody) ||
+      Boolean(staffUsernameInBody) ||
+      Boolean(staffPasswordInBody);
 
     const upsertRow: Record<string, unknown> = {
       tenant_id: tenantId,
@@ -215,6 +231,7 @@ export async function PUT(
       await ensureMindbodyWebhookSubscription(tenantId, siteId);
     } catch (e) {
       console.warn("Mindbody webhook subscription:", e);
+    }
     }
   }
 
