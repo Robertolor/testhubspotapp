@@ -2,8 +2,8 @@
 
 > **Branch:** `feature/field-mappings` (off stable `main` @ `6a277c7`)  
 > **Last updated:** 2026-06-04  
-> **Status:** Phases **A–E complete** on feature branch. See **[FIELD_MAPPINGS_STATUS.md](./FIELD_MAPPINGS_STATUS.md)** for merge summary.  
-> **Next:** Phase F (deals catalog + sync).
+> **Status:** Phases **A–E merged to `main`** (2026-07-01). Contact mappings + sync live on production after deploy.  
+> **Next:** Phase F (deals catalog + sync). See **[FIELD_MAPPINGS_STATUS.md](./FIELD_MAPPINGS_STATUS.md)**.
 
 Use this file as the source of truth for the custom property-mapping feature. Update sections as work lands.
 

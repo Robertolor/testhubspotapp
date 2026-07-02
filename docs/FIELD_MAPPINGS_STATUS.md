@@ -1,11 +1,11 @@
 # Field mappings — achievement summary
 
 > **Branch:** `feature/field-mappings`  
-> **Milestone:** Phases **A–D complete** (stop before Phase E)  
-> **Last updated:** 2026-06-04  
+> **Milestone:** Phases **A–E merged to `main`** (contact mappings beta)  
+> **Last updated:** 2026-07-01  
 > **Design doc:** [FIELD_MAPPINGS.md](./FIELD_MAPPINGS.md) (full plan + progress log)
 
-This document summarizes what was built and verified on the feature branch. Use it before merging to `main` or planning the next slice of work.
+This document summarizes what was built and verified. **Phase F (deals)** is next.
 
 ---
 
@@ -17,9 +17,9 @@ Tenants can now **configure Mindbody ↔ HubSpot field mappings** in the app:
 - View saved mappings with **system rows locked** (Email, Client ID)
 - **Add**, **remove**, and **save** mappings with server-side validation
 
-**Contact sync still uses the original `String()` transform** for mapped values. Custom fields (`custom:3`), nested paths (`HomeLocation.Id`), and proper date/number formatting are **not wired yet** (Phase E). Deal sync **ignores** saved deal mappings (Phase F).
+**Contact sync still uses saved mappings** with the transform layer (flat, nested, custom). Deal sync **ignores** saved deal mappings (Phase F).
 
-Phases A–D are a shippable **mapping configuration** feature. Phase E is required before exotic mappings affect sync correctly.
+Phases A–E shipped on **production** as contact mapping configuration + sync. Phase F adds real deal catalogs and deal sync.
 
 ---
 
@@ -55,6 +55,24 @@ Phases A–D are a shippable **mapping configuration** feature. Phase E is requi
 |------|-------------|----------|
 | 4.1 | `PUT .../mapping/fields` with validation | ✅ Save persists; type warnings (e.g. number → string) |
 | 4.2 | Add/remove rows, searchable pickers, Save/Cancel | ✅ Add, remove + save, refresh |
+
+### Phase E — Sync transforms
+
+| Step | Deliverable | Verified |
+|------|-------------|----------|
+| 5.1 | `lib/mapping/transform.ts` + `npm run validate:transform` | ✅ |
+| 5.2 | Contact sync uses saved mappings | ✅ Sandbox test sync (2026-07-01): Notes → Membership Notes applied |
+
+---
+
+## Production URLs (after merge)
+
+| Environment | URL |
+|---------------|-----|
+| **Production** | `https://testhubspotapp.vercel.app` |
+| **Mappings page** | `/settings/mappings` |
+
+Preview branch deploy is no longer required for this feature once `main` is deployed.
 
 ---
 
@@ -183,14 +201,14 @@ Verify with sample JSON, not sandbox roulette. Optional: one known-good sandbox 
 
 ## Merge checklist (`feature/field-mappings` → `main`)
 
-- [ ] Supabase: migration `20250604120000_field_mapping_metadata.sql` applied on production project
-- [ ] Vercel: deploy from `main` after merge; env vars unchanged
-- [ ] HubSpot Legacy app: production redirect URL already registered
+- [ ] **You must run:** Supabase production SQL — `supabase/migrations/20250604120000_field_mapping_metadata.sql` (see file; mappings APIs need `is_system`, type columns)
+- [x] Git: `feature/field-mappings` merged into `main` and pushed
+- [ ] Vercel: production deploy from `main` completes
+- [x] HubSpot Legacy app: production redirect URL already registered (`testhubspotapp.vercel.app`)
 - [ ] Smoke test on production: `/settings/mappings` loads, catalogs fetch, save round-trip
-- [ ] Confirm contact test sync still works with **default** mappings (optional; sandbox emails may partial-fail)
-- [ ] Update `FIELD_MAPPINGS.md` header “what exists today” table if desired
+- [x] Contact test sync with custom mapping verified on sandbox preview (Notes → Membership Notes)
 
-**Do not merge** until migration is on production Supabase — PUT/GET mappings expect the new columns.
+**Run the Supabase migration before using mappings on production** — without it, save/list mappings will error.
 
 ---
 
@@ -217,6 +235,6 @@ Verify with sample JSON, not sandbox roulette. Optional: one known-good sandbox 
 
 ## Recommendation
 
-**Merge Phases A–D** as “field mapping configuration (beta)” if you want the UI and persistence in production. Treat **custom/nested mappings and deal mappings** as configure-only until Phases E and F.
+**Merge Phases A–E** to production as “contact field mappings (beta).” Deal mappings in the UI are configure-only until Phase F.
 
-**Next branch:** `feature/field-mapping-sync` (or continue on same branch) for Phase E only, with self-check tests and no dependency on sandbox data quality.
+**Next:** Phase F on a new branch — Mindbody deal catalogs + wire deal sync.
