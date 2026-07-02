@@ -1,7 +1,14 @@
-import type { EntityType } from "@/lib/db/types";
+import type { EntityType, MindbodyDealSource } from "@/lib/db/types";
 
 export function parseMappingEntity(value: string | null): EntityType | null {
   if (value === "contact" || value === "deal") return value;
+  return null;
+}
+
+export function parseMindbodyDealSource(
+  value: string | null | undefined
+): MindbodyDealSource | null {
+  if (value === "sale" || value === "contract") return value;
   return null;
 }
 
@@ -13,6 +20,7 @@ export interface FieldMappingItem {
   isSystem: boolean;
   hubspotPropertyType: string | null;
   mindbodyFieldType: string | null;
+  mindbodySource: MindbodyDealSource | null;
 }
 
 export function toFieldMappingItem(row: {
@@ -23,6 +31,7 @@ export function toFieldMappingItem(row: {
   is_system: boolean;
   hubspot_property_type: string | null;
   mindbody_field_type: string | null;
+  mindbody_source?: MindbodyDealSource | null;
 }): FieldMappingItem {
   return {
     id: row.id,
@@ -32,5 +41,6 @@ export function toFieldMappingItem(row: {
     isSystem: row.is_system,
     hubspotPropertyType: row.hubspot_property_type,
     mindbodyFieldType: row.mindbody_field_type,
+    mindbodySource: row.mindbody_source ?? null,
   };
 }

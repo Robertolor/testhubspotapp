@@ -1,5 +1,5 @@
 import { getSupabase } from "@/lib/db/client";
-import type { EntityType, FieldMapping } from "@/lib/db/types";
+import type { EntityType, FieldMapping, MindbodyDealSource } from "@/lib/db/types";
 import { extractMindbodyValue, formatForHubspot, mapMindbodyFieldsToHubspot } from "@/lib/mapping/transform";
 
 type DefaultFieldMapping = Omit<FieldMapping, "id" | "tenant_id" | "created_at">;
@@ -13,6 +13,7 @@ export const DEFAULT_CONTACT_MAPPINGS: DefaultFieldMapping[] = [
     is_system: true,
     hubspot_property_type: "string",
     mindbody_field_type: "string",
+    mindbody_source: null,
   },
   {
     entity_type: "contact",
@@ -22,6 +23,7 @@ export const DEFAULT_CONTACT_MAPPINGS: DefaultFieldMapping[] = [
     is_system: false,
     hubspot_property_type: "string",
     mindbody_field_type: "string",
+    mindbody_source: null,
   },
   {
     entity_type: "contact",
@@ -31,6 +33,7 @@ export const DEFAULT_CONTACT_MAPPINGS: DefaultFieldMapping[] = [
     is_system: false,
     hubspot_property_type: "string",
     mindbody_field_type: "string",
+    mindbody_source: null,
   },
   {
     entity_type: "contact",
@@ -40,6 +43,7 @@ export const DEFAULT_CONTACT_MAPPINGS: DefaultFieldMapping[] = [
     is_system: false,
     hubspot_property_type: "string",
     mindbody_field_type: "string",
+    mindbody_source: null,
   },
   {
     entity_type: "contact",
@@ -49,6 +53,7 @@ export const DEFAULT_CONTACT_MAPPINGS: DefaultFieldMapping[] = [
     is_system: true,
     hubspot_property_type: "string",
     mindbody_field_type: "string",
+    mindbody_source: null,
   },
 ];
 
@@ -61,15 +66,17 @@ export const DEFAULT_DEAL_MAPPINGS: DefaultFieldMapping[] = [
     is_system: false,
     hubspot_property_type: "string",
     mindbody_field_type: "string",
+    mindbody_source: "contract",
   },
   {
     entity_type: "deal",
     hubspot_property: "amount",
-    mindbody_field: "amount",
+    mindbody_field: "totalAmount",
     is_custom: false,
     is_system: false,
     hubspot_property_type: "number",
     mindbody_field_type: "number",
+    mindbody_source: "sale",
   },
   {
     entity_type: "deal",
@@ -79,6 +86,7 @@ export const DEFAULT_DEAL_MAPPINGS: DefaultFieldMapping[] = [
     is_system: false,
     hubspot_property_type: "datetime",
     mindbody_field_type: "datetime",
+    mindbody_source: "contract",
   },
   {
     entity_type: "deal",
@@ -88,6 +96,7 @@ export const DEFAULT_DEAL_MAPPINGS: DefaultFieldMapping[] = [
     is_system: false,
     hubspot_property_type: "enumeration",
     mindbody_field_type: "string",
+    mindbody_source: "contract",
   },
 ];
 
@@ -106,16 +115,41 @@ export async function seedDefaultFieldMappings(tenantId: string): Promise<void> 
 
 export async function getFieldMappings(
   tenantId: string,
-  entityType: EntityType
+  entityType: EntityType,
+  options?: { mindbodySource?: MindbodyDealSource }
 ): Promise<FieldMapping[]> {
-  const { data, error } = await getSupabase()
+  let query = getSupabase()
     .from("field_mappings")
     .select("*")
     .eq("tenant_id", tenantId)
     .eq("entity_type", entityType);
 
+  if (entityType === "deal" && options?.mindbodySource) {
+    query = query.eq("mindbody_source", options.mindbodySource);
+  }
+
+  const { data, error } = await query;
   if (error) throw error;
   return (data ?? []) as FieldMapping[];
+}
+
+export function filterDealMappingsForSource(
+  mappings: FieldMapping[],
+  source: MindbodyDealSource
+): FieldMapping[] {
+  return mappings.filter(
+    (mapping) =>
+      mapping.entity_type === "deal" && mapping.mindbody_source === source
+  );
+}
+
+export function applyDealMappings(
+  mappings: FieldMapping[],
+  payload: Record<string, unknown>,
+  source: MindbodyDealSource
+): Record<string, string> {
+  const scoped = filterDealMappingsForSource(mappings, source);
+  return mapMindbodyFieldsToHubspot(scoped, payload);
 }
 
 export function applyContactMappings(

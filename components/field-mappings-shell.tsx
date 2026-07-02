@@ -15,10 +15,7 @@ import {
   type DraftMappingRow,
 } from "@/components/mappings-editor-panel";
 import type { PickerOption } from "@/components/mapping-field-picker";
-import {
-  DEAL_MINDBODY_FIELD_LABELS,
-  DEAL_MINDBODY_FIELDS,
-} from "@/lib/mapping/deal-fields";
+import type { MindbodyDealSource } from "@/lib/db/types";
 import { cn } from "@/lib/utils";
 
 type MappingEntityTab = "contact" | "deal";
@@ -26,6 +23,11 @@ type MappingEntityTab = "contact" | "deal";
 const TABS: { id: MappingEntityTab; label: string }[] = [
   { id: "contact", label: "Contacts" },
   { id: "deal", label: "Deals" },
+];
+
+const DEAL_SOURCE_TABS: { id: MindbodyDealSource; label: string }[] = [
+  { id: "contract", label: "Contracts" },
+  { id: "sale", label: "Sales" },
 ];
 
 interface HubspotCatalogProperty {
@@ -73,16 +75,6 @@ function toMindbodyItems(fields: MindbodyCatalogField[]): CatalogListItem[] {
   }));
 }
 
-function dealMindbodyCatalogFields(): MindbodyCatalogField[] {
-  return DEAL_MINDBODY_FIELDS.map((field) => ({
-    key: field.key,
-    label: DEAL_MINDBODY_FIELD_LABELS[field.key] ?? field.key,
-    type: field.type,
-    groupName: "deal",
-    isCustom: false,
-  }));
-}
-
 function MappingsSkeleton() {
   return (
     <div className="mt-6 space-y-4" aria-busy="true">
@@ -109,6 +101,7 @@ function mappingsEqual(a: DraftMappingRow[], b: DraftMappingRow[]): boolean {
 
 export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
   const [entity, setEntity] = useState<MappingEntityTab>("contact");
+  const [dealSource, setDealSource] = useState<MindbodyDealSource>("contract");
   const [loading, setLoading] = useState(true);
   const [hubspotError, setHubspotError] = useState<string | null>(null);
   const [mindbodyError, setMindbodyError] = useState<string | null>(null);
@@ -144,8 +137,7 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
     const hubspotObject = entity === "contact" ? "contacts" : "deals";
 
     let hubspotProperties: HubspotCatalogProperty[] = [];
-    let mindbodyFields: MindbodyCatalogField[] =
-      entity === "deal" ? dealMindbodyCatalogFields() : [];
+    let mindbodyFields: MindbodyCatalogField[] = [];
     let mappings: FieldMappingItem[] = [];
 
     try {
@@ -184,12 +176,32 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
           e instanceof Error ? e.message : "Failed to load Mindbody catalog"
         );
       }
+    } else {
+      try {
+        const res = await fetch(
+          `/api/tenants/${tenantId}/mapping/catalog/mindbody?entity=${dealSource}`
+        );
+        const data = (await res.json()) as {
+          fields?: MindbodyCatalogField[];
+          error?: string;
+        };
+        if (!res.ok) {
+          throw new Error(data.error ?? "Failed to load Mindbody catalog");
+        }
+        mindbodyFields = data.fields ?? [];
+      } catch (e) {
+        setMindbodyError(
+          e instanceof Error ? e.message : "Failed to load Mindbody catalog"
+        );
+      }
     }
 
     try {
-      const res = await fetch(
-        `/api/tenants/${tenantId}/mapping/fields?entity=${entity}`
-      );
+      const mappingsUrl =
+        entity === "deal"
+          ? `/api/tenants/${tenantId}/mapping/fields?entity=deal&mindbodySource=${dealSource}`
+          : `/api/tenants/${tenantId}/mapping/fields?entity=${entity}`;
+      const res = await fetch(mappingsUrl);
       const data = (await res.json()) as {
         mappings?: FieldMappingItem[];
         error?: string;
@@ -212,7 +224,7 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
     setDraftRows(draft);
     setSavedSnapshot(draft);
     setLoading(false);
-  }, [entity, tenantId]);
+  }, [entity, dealSource, tenantId]);
 
   useEffect(() => {
     void loadData();
@@ -290,6 +302,7 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           entity,
+          ...(entity === "deal" ? { mindbodySource: dealSource } : {}),
           mappings: draftRows.map((row) => ({
             hubspotProperty: row.hubspotProperty,
             mindbodyField: row.mindbodyField,
@@ -351,7 +364,18 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
   );
 
   const heading =
-    entity === "contact" ? "Contact mappings" : "Deal mappings";
+    entity === "contact"
+      ? "Contact mappings"
+      : dealSource === "contract"
+        ? "Deal mappings — contracts"
+        : "Deal mappings — sales";
+
+  const helperText =
+    entity === "contact"
+      ? "Use + Add mapping and Remove on non-system rows, then save. Email and Client ID stay locked."
+      : dealSource === "contract"
+        ? "Map Mindbody contract fields to HubSpot deal properties. Contract ID stays locked when configured as a system row."
+        : "Map Mindbody sale fields to HubSpot deal properties. Sale ID stays locked when configured as a system row.";
 
   return (
     <div className="mt-6">
@@ -373,12 +397,29 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
         ))}
       </div>
 
+      {entity === "deal" ? (
+        <div className="mt-3 flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
+          {DEAL_SOURCE_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setDealSource(tab.id)}
+              className={cn(
+                "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                dealSource === tab.id
+                  ? "bg-white text-teal-800 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       <Card className="mt-6">
         <CardTitle>{heading}</CardTitle>
-        <p className="mt-1 text-sm text-slate-500">
-          Use <strong>+ Add mapping</strong> and <strong>Remove</strong> on
-          non-system rows, then save. Email and Client ID stay locked.
-        </p>
+        <p className="mt-1 text-sm text-slate-500">{helperText}</p>
 
         {loading ? (
           <MappingsSkeleton />
@@ -444,12 +485,20 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
                     />
                   ) : (
                     <MappingCatalogPanel
-                      title="Mindbody deal fields"
-                      description="Static list until sale/contract catalogs ship"
+                      title={
+                        dealSource === "contract"
+                          ? "Mindbody contract fields"
+                          : "Mindbody sale fields"
+                      }
+                      description={
+                        dealSource === "contract"
+                          ? "Fields from Mindbody client contracts"
+                          : "Fields from Mindbody sales"
+                      }
                       search={mindbodySearch}
                       onSearchChange={setMindbodySearch}
                       loading={false}
-                      error={null}
+                      error={mindbodyError}
                       items={filterCatalogItems(mindbodyItems, mindbodySearch)}
                       totalCount={mindbodyItems.length}
                     />

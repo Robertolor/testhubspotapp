@@ -1,6 +1,6 @@
 import { getSupabase } from "@/lib/db/client";
-import type { EntityType } from "@/lib/db/types";
-import { DEAL_MINDBODY_FIELDS } from "@/lib/mapping/deal-fields";
+import type { EntityType, MindbodyDealSource } from "@/lib/db/types";
+import { dealMindbodyFieldsForSource } from "@/lib/mapping/deal-fields";
 import type { FieldMappingItem } from "@/lib/mapping/fields";
 import { toFieldMappingItem } from "@/lib/mapping/fields";
 import { listMindbodyContactFields } from "@/lib/mindbody/field-catalog";
@@ -15,7 +15,8 @@ import {
 } from "@/lib/hubspot/tokens";
 import {
   SYSTEM_CONTACT_MAPPING_PAIRS,
-  SYSTEM_DEAL_MAPPING_PAIRS,
+  SYSTEM_CONTRACT_MAPPING_PAIRS,
+  SYSTEM_SALE_MAPPING_PAIRS,
   validateContactMappingSave,
   validateMappingBatch,
   validateSystemMappingsPreserved,
@@ -38,20 +39,25 @@ function hubspotObjectForEntity(entity: EntityType): HubspotCatalogObject {
   return entity === "contact" ? "contacts" : "deals";
 }
 
-function systemPairsForEntity(entity: EntityType): MappingRowRef[] {
-  return entity === "contact"
-    ? SYSTEM_CONTACT_MAPPING_PAIRS
-    : SYSTEM_DEAL_MAPPING_PAIRS;
+function systemPairsForEntity(
+  entity: EntityType,
+  mindbodySource?: MindbodyDealSource
+): MappingRowRef[] {
+  if (entity === "contact") return SYSTEM_CONTACT_MAPPING_PAIRS;
+  if (mindbodySource === "sale") return SYSTEM_SALE_MAPPING_PAIRS;
+  if (mindbodySource === "contract") return SYSTEM_CONTRACT_MAPPING_PAIRS;
+  return [...SYSTEM_SALE_MAPPING_PAIRS, ...SYSTEM_CONTRACT_MAPPING_PAIRS];
 }
 
 function resolveIsSystem(
   entity: EntityType,
   hubspotProperty: string,
-  existing: MappingRowRef[]
+  existing: MappingRowRef[],
+  mindbodySource?: MindbodyDealSource
 ): boolean {
   const prev = existing.find((row) => row.hubspotProperty === hubspotProperty);
   if (prev?.isSystem) return true;
-  return systemPairsForEntity(entity).some(
+  return systemPairsForEntity(entity, mindbodySource).some(
     (row) => row.hubspotProperty === hubspotProperty
   );
 }
@@ -88,10 +94,14 @@ async function loadHubspotCatalog(
 
 async function loadMindbodyCatalog(
   tenantId: string,
-  entity: EntityType
+  entity: EntityType,
+  mindbodySource?: MindbodyDealSource
 ): Promise<MindbodyFieldRef[]> {
   if (entity === "deal") {
-    return DEAL_MINDBODY_FIELDS;
+    if (!mindbodySource) {
+      throw new Error("Deal mappings require mindbodySource (sale or contract)");
+    }
+    return dealMindbodyFieldsForSource(mindbodySource);
   }
 
   const mindbodyAccount = await getMindbodyAccountByTenant(tenantId);
@@ -124,8 +134,16 @@ export class SaveMappingsError extends Error {
 export async function saveEntityFieldMappings(
   tenantId: string,
   entity: EntityType,
-  proposed: SaveMappingInput[]
+  proposed: SaveMappingInput[],
+  options?: { mindbodySource?: MindbodyDealSource }
 ): Promise<{ mappings: FieldMappingItem[]; warnings: string[] }> {
+  const mindbodySource = entity === "deal" ? options?.mindbodySource : undefined;
+  if (entity === "deal" && !mindbodySource) {
+    throw new SaveMappingsError(
+      "Deal mappings require mindbodySource (sale or contract).",
+      []
+    );
+  }
   const rows: MappingRowRef[] = proposed.map((row) => ({
     hubspotProperty: row.hubspotProperty.trim(),
     mindbodyField: row.mindbodyField.trim(),
@@ -143,7 +161,10 @@ export async function saveEntityFieldMappings(
     );
   }
 
-  const existing = await getFieldMappings(tenantId, entity);
+  const existing =
+    entity === "deal" && mindbodySource
+      ? await getFieldMappings(tenantId, entity, { mindbodySource })
+      : await getFieldMappings(tenantId, entity);
   const before: MappingRowRef[] = existing.map((row) => ({
     hubspotProperty: row.hubspot_property,
     mindbodyField: row.mindbody_field,
@@ -158,7 +179,11 @@ export async function saveEntityFieldMappings(
   }));
   const hubspotByName = new Map(hubspotCatalogRaw.map((p) => [p.name, p]));
 
-  const mindbodyCatalog = await loadMindbodyCatalog(tenantId, entity);
+  const mindbodyCatalog = await loadMindbodyCatalog(
+    tenantId,
+    entity,
+    mindbodySource
+  );
 
   const validation =
     entity === "contact"
@@ -184,18 +209,32 @@ export async function saveEntityFieldMappings(
         row.hubspotProperty,
         hubspot?.groupName
       ),
-      is_system: resolveIsSystem(entity, row.hubspotProperty, before),
+      is_system: resolveIsSystem(
+        entity,
+        row.hubspotProperty,
+        before,
+        mindbodySource
+      ),
       hubspot_property_type: hubspot?.type ?? null,
       mindbody_field_type: mindbody?.type ?? null,
+      ...(entity === "deal" && mindbodySource
+        ? { mindbody_source: mindbodySource }
+        : {}),
     };
   });
 
   const supabase = getSupabase();
-  const { error: deleteError } = await supabase
+  let deleteQuery = supabase
     .from("field_mappings")
     .delete()
     .eq("tenant_id", tenantId)
     .eq("entity_type", entity);
+
+  if (entity === "deal" && mindbodySource) {
+    deleteQuery = deleteQuery.eq("mindbody_source", mindbodySource);
+  }
+
+  const { error: deleteError } = await deleteQuery;
 
   if (deleteError) throw deleteError;
 
@@ -206,8 +245,13 @@ export async function saveEntityFieldMappings(
 
   if (insertError) throw insertError;
 
+  const saved =
+    entity === "deal" && mindbodySource
+      ? await getFieldMappings(tenantId, entity, { mindbodySource })
+      : ((inserted ?? []) as Awaited<ReturnType<typeof getFieldMappings>>);
+
   return {
-    mappings: (inserted ?? []).map(toFieldMappingItem),
+    mappings: saved.map(toFieldMappingItem),
     warnings: validation.warnings,
   };
 }

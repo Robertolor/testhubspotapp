@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import {
   parseMappingEntity,
+  parseMindbodyDealSource,
   toFieldMappingItem,
 } from "@/lib/mapping/fields";
+import type { MindbodyDealSource } from "@/lib/db/types";
 import {
   SaveMappingsError,
   saveEntityFieldMappings,
@@ -28,10 +30,28 @@ export async function GET(
     );
   }
 
+  const mindbodySource =
+    entity === "deal"
+      ? parseMindbodyDealSource(
+          request.nextUrl.searchParams.get("mindbodySource")
+        )
+      : null;
+  if (entity === "deal" && !mindbodySource) {
+    return NextResponse.json(
+      { error: "Query param mindbodySource must be sale or contract for deals" },
+      { status: 400 }
+    );
+  }
+
   try {
-    const rows = await getFieldMappings(tenantId, entity);
+    const rows = await getFieldMappings(
+      tenantId,
+      entity,
+      mindbodySource ? { mindbodySource } : undefined
+    );
     return NextResponse.json({
       entity,
+      mindbodySource,
       mappings: rows.map(toFieldMappingItem),
     });
   } catch (e) {
@@ -58,6 +78,7 @@ export async function PUT(
 
   const body = (await request.json()) as {
     entity?: string;
+    mindbodySource?: string;
     mappings?: { hubspotProperty?: string; mindbodyField?: string }[];
   };
 
@@ -65,6 +86,17 @@ export async function PUT(
   if (!entity) {
     return NextResponse.json(
       { error: "Body entity must be contact or deal" },
+      { status: 400 }
+    );
+  }
+
+  const mindbodySource =
+    entity === "deal" ? parseMindbodyDealSource(body.mindbodySource) : null;
+  if (entity === "deal" && !mindbodySource) {
+    return NextResponse.json(
+      {
+        error: "Body mindbodySource must be sale or contract for deal mappings",
+      },
       { status: 400 }
     );
   }
@@ -82,9 +114,12 @@ export async function PUT(
   }));
 
   try {
-    const result = await saveEntityFieldMappings(tenantId, entity, mappings);
+    const result = await saveEntityFieldMappings(tenantId, entity, mappings, {
+      mindbodySource: mindbodySource ?? undefined,
+    });
     return NextResponse.json({
       entity,
+      mindbodySource,
       mappings: result.mappings,
       warnings: result.warnings,
     });

@@ -5,6 +5,11 @@ import {
   listMindbodyContactFields,
   parseMindbodyCatalogEntity,
 } from "@/lib/mindbody/field-catalog";
+import {
+  listMindbodyContractFields,
+  listMindbodySaleFields,
+  parseMindbodyDealCatalogEntity,
+} from "@/lib/mindbody/deal-field-catalog";
 
 export async function GET(
   request: NextRequest,
@@ -16,14 +21,32 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const entity = parseMindbodyCatalogEntity(
-    request.nextUrl.searchParams.get("entity")
-  );
-  if (!entity) {
+  const entityParam = request.nextUrl.searchParams.get("entity");
+  const contactEntity = parseMindbodyCatalogEntity(entityParam);
+  const dealEntity = parseMindbodyDealCatalogEntity(entityParam);
+
+  if (!contactEntity && !dealEntity) {
     return NextResponse.json(
-      { error: "Query param entity must be contact" },
+      { error: "Query param entity must be contact, sale, or contract" },
       { status: 400 }
     );
+  }
+
+  if (dealEntity) {
+    const fields =
+      dealEntity === "sale"
+        ? listMindbodySaleFields()
+        : listMindbodyContractFields();
+    return NextResponse.json({
+      entity: dealEntity,
+      fields: fields.map((field) => ({
+        key: field.key,
+        label: field.label,
+        type: field.type,
+        groupName: field.source,
+        isCustom: false,
+      })),
+    });
   }
 
   const mindbodyAccount = await getMindbodyAccountByTenant(tenantId);
@@ -36,7 +59,7 @@ export async function GET(
 
   try {
     const fields = await listMindbodyContactFields(mindbodyAccount);
-    return NextResponse.json({ entity, fields });
+    return NextResponse.json({ entity: contactEntity, fields });
   } catch (e) {
     console.error("[mapping/catalog/mindbody]", e);
     return NextResponse.json(

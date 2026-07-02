@@ -51,6 +51,8 @@ export interface SyncSettings {
   hubspot_properties_bootstrapped: boolean;
 }
 
+export type MindbodyDealSource = "sale" | "contract";
+
 export interface FieldMapping {
   id: string;
   tenant_id: string;
@@ -61,6 +63,7 @@ export interface FieldMapping {
   is_system: boolean;
   hubspot_property_type: string | null;
   mindbody_field_type: string | null;
+  mindbody_source: MindbodyDealSource | null;
 }
 
 export interface EntityMapping {

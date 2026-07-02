@@ -12,6 +12,10 @@ import {
 import { getValidAccessToken } from "@/lib/hubspot/tokens";
 import { searchContactByMindbodyId } from "@/lib/hubspot/crm";
 import { allowsSync } from "@/lib/sync/direction";
+import {
+  applyDealMappings,
+  getFieldMappings,
+} from "@/lib/sync/field-mappings";
 
 export async function syncContractToHubspotDeal(
   tenantId: string,
@@ -46,8 +50,21 @@ export async function syncContractToHubspotDeal(
     ? await searchContactByMindbodyId(accessToken, clientUniqueId)
     : null;
 
+  const mappings = await getFieldMappings(tenantId, "deal");
+  const normalizedPayload: Record<string, unknown> = {
+    clientContractId,
+    clientUniqueId,
+    contractName,
+    contractStartDateTime: payload.contractStartDateTime,
+    contractEndDateTime: payload.contractEndDateTime,
+    agreementDate: payload.agreementDate,
+    autopayStatus: payload.autopayStatus,
+    locationId: payload.locationId,
+    deal_source: "mindbody_contract",
+  };
+
   const dealProps = {
-    dealname: contractName,
+    ...applyDealMappings(mappings, normalizedPayload, "contract"),
     deal_source: "mindbody_contract",
     mindbody_contract_id: clientContractId,
     mindbody_client_id: clientUniqueId,
@@ -111,8 +128,21 @@ export async function syncSaleToHubspotDeal(
     ? await searchContactByMindbodyId(accessToken, clientId)
     : null;
 
+  const mappings = await getFieldMappings(tenantId, "deal");
+  const normalizedPayload: Record<string, unknown> = {
+    saleId,
+    clientId,
+    clientUniqueId: clientId,
+    totalAmount: amount,
+    paymentsTotal: payload.paymentsTotal ?? amount,
+    amount,
+    saleDateTime: payload.saleDateTime ?? payload.originalSaleDateTime,
+    originalSaleDateTime: payload.originalSaleDateTime,
+    deal_source: "mindbody_sale",
+  };
+
   const dealProps = {
-    dealname: `Mindbody Sale ${saleId}`,
+    ...applyDealMappings(mappings, normalizedPayload, "sale"),
     deal_source: "mindbody_sale",
     mindbody_sale_id: saleId,
     mindbody_client_id: clientId,

@@ -36,13 +36,22 @@ export const SYSTEM_CONTACT_MAPPING_PAIRS: MappingRowRef[] = [
 ];
 
 /** Deal identity fields (enforced when present as is_system rows). */
-export const SYSTEM_DEAL_MAPPING_PAIRS: MappingRowRef[] = [
+export const SYSTEM_SALE_MAPPING_PAIRS: MappingRowRef[] = [
   { hubspotProperty: "mindbody_sale_id", mindbodyField: "saleId", isSystem: true },
+];
+
+export const SYSTEM_CONTRACT_MAPPING_PAIRS: MappingRowRef[] = [
   {
     hubspotProperty: "mindbody_contract_id",
     mindbodyField: "clientContractId",
     isSystem: true,
   },
+];
+
+/** @deprecated Use SYSTEM_SALE_MAPPING_PAIRS or SYSTEM_CONTRACT_MAPPING_PAIRS */
+export const SYSTEM_DEAL_MAPPING_PAIRS: MappingRowRef[] = [
+  ...SYSTEM_SALE_MAPPING_PAIRS,
+  ...SYSTEM_CONTRACT_MAPPING_PAIRS,
 ];
 
 function emptyResult(): MappingValidationResult {
