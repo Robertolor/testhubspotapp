@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { runInBackground } from "@/lib/background";
 import { decryptSecret } from "@/lib/crypto/secrets";
 import { getSupabase } from "@/lib/db/client";
 import { getMindbodyAccountBySite } from "@/lib/mindbody/client";
@@ -98,12 +99,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Storage failed" }, { status: 500 });
   }
 
-  await dispatchProcessWebhook({
-    tenantId,
-    source: "mindbody",
-    deliveryId: delivery.id,
-    payload,
-  });
+  runInBackground(
+    dispatchProcessWebhook({
+      tenantId,
+      source: "mindbody",
+      deliveryId: delivery.id,
+      payload,
+    })
+  );
 
   return NextResponse.json({ ok: true });
 }
