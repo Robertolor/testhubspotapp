@@ -127,10 +127,13 @@ export async function PUT(
     const staffUsernameInBody = body.mindbody.staffUsername?.trim() ?? "";
     const staffPasswordInBody = body.mindbody.staffPassword?.trim() ?? "";
 
+    const staffUsernameChanged =
+      Boolean(staffUsernameInBody) &&
+      staffUsernameInBody !== (existing?.staff_username ?? "");
     const mindbodyFieldsTouched =
       Boolean(apiKeyInBody) ||
-      Boolean(staffUsernameInBody) ||
       Boolean(staffPasswordInBody) ||
+      staffUsernameChanged ||
       existing?.site_id !== siteId;
 
     if (!mindbodyFieldsTouched && existing?.api_key_encrypted) {
@@ -189,29 +192,35 @@ export async function PUT(
     const credentialsChanged =
       existing?.site_id !== siteId ||
       Boolean(apiKeyInBody) ||
-      Boolean(staffUsernameInBody) ||
+      staffUsernameChanged ||
       Boolean(staffPasswordInBody);
 
     const upsertRow: Record<string, unknown> = {
       tenant_id: tenantId,
       site_id: siteId,
       api_key_encrypted: encryptSecret(apiKey),
+      staff_username: staffUsername,
+      staff_password_encrypted: encryptSecret(staffPassword),
       updated_at: new Date().toISOString(),
     };
-
-    if (staffUsername && staffPassword) {
-      upsertRow.staff_username = staffUsername;
-      upsertRow.staff_password_encrypted = encryptSecret(staffPassword);
-    }
 
     if (credentialsChanged) {
       upsertRow.access_token_encrypted = null;
       upsertRow.oauth_expires_at = null;
     }
 
-    await supabase.from("mindbody_accounts").upsert(upsertRow, {
-      onConflict: "tenant_id",
-    });
+    if (existing) {
+      const { error: updateError } = await supabase
+        .from("mindbody_accounts")
+        .update(upsertRow)
+        .eq("tenant_id", tenantId);
+      if (updateError) throw updateError;
+    } else {
+      const { error: insertError } = await supabase
+        .from("mindbody_accounts")
+        .insert(upsertRow);
+      if (insertError) throw insertError;
+    }
 
     if (staffUsername && staffPassword) {
       try {

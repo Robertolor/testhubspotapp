@@ -67,7 +67,19 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
         Boolean(staffPassword) ||
         staffUsername !== savedStaffUsername ||
         siteId !== savedSiteId;
-      const needsMindbodySetup = !data?.mindbody?.staffPasswordConfigured;
+      const needsMindbodySetup =
+        !data?.mindbody?.staffPasswordConfigured ||
+        !data?.mindbody?.staffConfigured;
+
+      if (
+        siteId &&
+        needsMindbodySetup &&
+        (!staffUsername.trim() || !staffPassword.trim())
+      ) {
+        throw new Error(
+          "Enter staff username and password, then Save settings."
+        );
+      }
 
       const res = await fetch(`/api/tenants/${tenantId}/settings`, {
         method: "PUT",
@@ -166,17 +178,36 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
           API access permission.
         </p>
         {data?.mindbody?.configured ? (
-          <p
-            className={`mt-2 text-sm ${
-              data.mindbody.staffPasswordConfigured
-                ? "text-teal-700"
-                : "text-amber-800"
+          <div
+            className={`mt-3 rounded-lg border px-4 py-3 text-sm ${
+              data.mindbody.staffPasswordConfigured &&
+              data.mindbody.staffConfigured
+                ? "border-teal-200 bg-teal-50 text-teal-900"
+                : "border-amber-200 bg-amber-50 text-amber-950"
             }`}
           >
-            {data.mindbody.staffPasswordConfigured
-              ? "Mindbody staff login is saved. Leave password blank unless you are changing it."
-              : "Staff password is missing — enter staff username and password, then Save settings."}
-          </p>
+            <p className="font-medium">
+              {data.mindbody.staffPasswordConfigured &&
+              data.mindbody.staffConfigured
+                ? "Mindbody credentials saved"
+                : "Mindbody staff login incomplete"}
+            </p>
+            <ul className="mt-2 space-y-1 text-xs">
+              <li>Site ID and API key — saved</li>
+              <li>
+                Staff username —{" "}
+                {data.mindbody.staffConfigured
+                  ? data.mindbody.staffUsername
+                  : "not saved (required)"}
+              </li>
+              <li>
+                Staff password —{" "}
+                {data.mindbody.staffPasswordConfigured
+                  ? "saved (hidden). Leave blank unless changing it."
+                  : "not saved (required)"}
+              </li>
+            </ul>
+          </div>
         ) : null}
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <label className="block text-sm">
