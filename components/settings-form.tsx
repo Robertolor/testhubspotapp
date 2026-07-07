@@ -1,10 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ActionFeedback } from "@/components/ui/action-feedback";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 
 type SyncDirection = "mb_to_hs" | "hs_to_mb" | "bidirectional";
+
+type PendingAction =
+  | "save"
+  | "testContact"
+  | "testDeal"
+  | "backfillContact"
+  | "backfillDeal"
+  | null;
 
 interface SettingsData {
   settings?: {
@@ -23,6 +32,15 @@ interface SettingsData {
   hubspot?: { portalId: number; hubDomain: string | null };
 }
 
+function isErrorMessage(text: string): boolean {
+  const lower = text.toLowerCase();
+  return (
+    lower.includes("fail") ||
+    lower.includes("error") ||
+    lower.includes("required")
+  );
+}
+
 export function SettingsForm({ tenantId }: { tenantId: string }) {
   const [data, setData] = useState<SettingsData | null>(null);
   const [siteId, setSiteId] = useState("");
@@ -35,8 +53,13 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
   const [dealsEnabled, setDealsEnabled] = useState(false);
   const [dealsDirection, setDealsDirection] =
     useState<SyncDirection>("mb_to_hs");
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<PendingAction>(null);
+  const [saveSucceeded, setSaveSucceeded] = useState(false);
+  const [mindbodyFeedback, setMindbodyFeedback] = useState<string | null>(null);
+  const [testSyncFeedback, setTestSyncFeedback] = useState<string | null>(null);
+  const [backfillFeedback, setBackfillFeedback] = useState<string | null>(null);
+
+  const actionBusy = pendingAction !== null;
 
   useEffect(() => {
     fetch(`/api/tenants/${tenantId}/settings`)
@@ -54,9 +77,16 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
       });
   }, [tenantId]);
 
+  useEffect(() => {
+    if (!saveSucceeded) return;
+    const timer = window.setTimeout(() => setSaveSucceeded(false), 2000);
+    return () => window.clearTimeout(timer);
+  }, [saveSucceeded]);
+
   async function save() {
-    setSaving(true);
-    setMessage(null);
+    setPendingAction("save");
+    setMindbodyFeedback(null);
+    setSaveSucceeded(false);
     try {
       const savedStaffUsername = data?.mindbody?.staffUsername ?? "";
       const savedSiteId = data?.mindbody?.siteId
@@ -118,7 +148,9 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
         throw new Error(`Server error (${res.status})`);
       }
       if (!res.ok) throw new Error(json.error ?? "Save failed");
-      setMessage("Settings saved.");
+
+      setSaveSucceeded(true);
+      setMindbodyFeedback("Settings saved.");
       setApiKey("");
       setStaffPassword("");
       const refreshed = await fetch(`/api/tenants/${tenantId}/settings`).then(
@@ -126,25 +158,56 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
       );
       setData(refreshed);
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Save failed");
+      const message = e instanceof Error ? e.message : "Save failed";
+      setMindbodyFeedback(message);
     } finally {
-      setSaving(false);
+      setPendingAction(null);
     }
   }
 
   async function runBackfill(entityType: "contact" | "deal") {
-    setMessage(null);
-    const res = await fetch(`/api/tenants/${tenantId}/sync/full`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ entityType }),
-    });
-    const json = await res.json();
-    setMessage(json.message ?? (res.ok ? "Backfill queued" : json.error));
+    const key = entityType === "contact" ? "backfillContact" : "backfillDeal";
+    setPendingAction(key);
+    setBackfillFeedback(null);
+    try {
+      const res = await fetch(`/api/tenants/${tenantId}/sync/full`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entityType }),
+      });
+      const text = await res.text();
+      let json: { message?: string; error?: string } = {};
+      if (text) {
+        try {
+          json = JSON.parse(text) as { message?: string; error?: string };
+        } catch {
+          throw new Error(
+            res.ok
+              ? "Unexpected server response"
+              : `Server error (${res.status})`
+          );
+        }
+      }
+      if (!res.ok) {
+        throw new Error(json.error ?? `Server error (${res.status})`);
+      }
+      setBackfillFeedback(
+        json.message ??
+          `Full ${entityType} backfill queued. Check Reports for progress.`
+      );
+    } catch (e) {
+      setBackfillFeedback(
+        e instanceof Error ? e.message : "Backfill failed to start"
+      );
+    } finally {
+      setPendingAction(null);
+    }
   }
 
   async function runTestSync(entityType: "contact" | "deal") {
-    setMessage(null);
+    const key = entityType === "contact" ? "testContact" : "testDeal";
+    setPendingAction(key);
+    setTestSyncFeedback(null);
     try {
       const res = await fetch(`/api/tenants/${tenantId}/sync/test`, {
         method: "POST",
@@ -167,9 +230,15 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
       if (!res.ok) {
         throw new Error(json.error ?? `Server error (${res.status})`);
       }
-      setMessage(json.message ?? "Test sync started. Check Reports.");
+      setTestSyncFeedback(
+        json.message ?? "Test sync started. Check Reports for progress."
+      );
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Test sync failed");
+      setTestSyncFeedback(
+        e instanceof Error ? e.message : "Test sync failed to start"
+      );
+    } finally {
+      setPendingAction(null);
     }
   }
 
@@ -223,6 +292,14 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
             </ul>
           </div>
         ) : null}
+        {mindbodyFeedback ? (
+          <ActionFeedback
+            type={isErrorMessage(mindbodyFeedback) ? "error" : "success"}
+            className="mt-3"
+          >
+            {mindbodyFeedback}
+          </ActionFeedback>
+        ) : null}
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <label className="block text-sm">
             <span className="font-medium text-slate-700">Site ID</span>
@@ -273,6 +350,16 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
             />
           </label>
         </div>
+        <div className="mt-4">
+          <Button
+            onClick={save}
+            loading={pendingAction === "save"}
+            success={saveSucceeded}
+            disabled={actionBusy && pendingAction !== "save"}
+          >
+            {pendingAction === "save" ? "Saving…" : "Save settings"}
+          </Button>
+        </div>
       </Card>
 
       <Card>
@@ -306,38 +393,73 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
           function logs. Use this instead of full backfill on shared sandbox
           site <code className="text-xs">-99</code>.
         </p>
+        {testSyncFeedback ? (
+          <ActionFeedback
+            type={isErrorMessage(testSyncFeedback) ? "error" : "success"}
+            className="mt-3"
+          >
+            {testSyncFeedback}
+          </ActionFeedback>
+        ) : null}
         <div className="mt-4 flex flex-wrap gap-3">
-          <Button variant="secondary" onClick={() => runTestSync("contact")}>
-            Test sync contacts (20)
+          <Button
+            variant="secondary"
+            onClick={() => runTestSync("contact")}
+            loading={pendingAction === "testContact"}
+            disabled={actionBusy && pendingAction !== "testContact"}
+          >
+            {pendingAction === "testContact"
+              ? "Starting…"
+              : "Test sync contacts (20)"}
           </Button>
-          <Button variant="secondary" onClick={() => runTestSync("deal")}>
-            Test sync deals (20)
+          <Button
+            variant="secondary"
+            onClick={() => runTestSync("deal")}
+            loading={pendingAction === "testDeal"}
+            disabled={actionBusy && pendingAction !== "testDeal"}
+          >
+            {pendingAction === "testDeal"
+              ? "Starting…"
+              : "Test sync deals (20)"}
           </Button>
         </div>
       </Card>
 
-      <div className="flex flex-wrap gap-3">
-        <Button onClick={save} disabled={saving}>
-          {saving ? "Saving…" : "Save settings"}
-        </Button>
-        <Button variant="secondary" onClick={() => runBackfill("contact")}>
-          Full backfill contacts
-        </Button>
-        <Button variant="secondary" onClick={() => runBackfill("deal")}>
-          Full backfill deals
-        </Button>
-      </div>
-      <p className="text-xs text-slate-500">
-        Full backfill pulls all records — avoid on Mindbody sandbox.
-      </p>
-
-      {message && (
-        <p
-          className={`text-sm ${message.includes("failed") || message.includes("error") ? "text-red-600" : "text-teal-700"}`}
-        >
-          {message}
+      <div>
+        <div className="flex flex-wrap gap-3">
+          <Button
+            variant="secondary"
+            onClick={() => runBackfill("contact")}
+            loading={pendingAction === "backfillContact"}
+            disabled={actionBusy && pendingAction !== "backfillContact"}
+          >
+            {pendingAction === "backfillContact"
+              ? "Queuing…"
+              : "Full backfill contacts"}
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => runBackfill("deal")}
+            loading={pendingAction === "backfillDeal"}
+            disabled={actionBusy && pendingAction !== "backfillDeal"}
+          >
+            {pendingAction === "backfillDeal"
+              ? "Queuing…"
+              : "Full backfill deals"}
+          </Button>
+        </div>
+        <p className="mt-2 text-xs text-slate-500">
+          Full backfill pulls all records — avoid on Mindbody sandbox.
         </p>
-      )}
+        {backfillFeedback ? (
+          <ActionFeedback
+            type={isErrorMessage(backfillFeedback) ? "error" : "success"}
+            className="mt-3"
+          >
+            {backfillFeedback}
+          </ActionFeedback>
+        ) : null}
+      </div>
     </div>
   );
 }

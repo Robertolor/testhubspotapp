@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { ActionFeedback } from "@/components/ui/action-feedback";
 import {
   MappingFieldPicker,
   type PickerOption,
@@ -27,6 +28,7 @@ interface MappingsEditorPanelProps {
   dirty: boolean;
   saveEnabled: boolean;
   saving: boolean;
+  saveSuccess?: boolean;
   saveError: string | null;
   saveErrors: string[];
   saveWarnings: string[];
@@ -50,6 +52,7 @@ export function MappingsEditorPanel({
   dirty,
   saveEnabled,
   saving,
+  saveSuccess = false,
   saveError,
   saveErrors,
   saveWarnings,
@@ -71,6 +74,10 @@ export function MappingsEditorPanel({
   function removeRow(rowId: string) {
     onRowsChange(rows.filter((row) => row.id !== rowId));
   }
+
+  let saveLabel = "Save mappings";
+  if (saving) saveLabel = "Saving…";
+  else if (saveSuccess) saveLabel = "Saved";
 
   return (
     <div className="mt-6 overflow-hidden rounded-lg border border-slate-200 bg-slate-50/50">
@@ -98,12 +105,24 @@ export function MappingsEditorPanel({
             >
               Cancel
             </Button>
-            <Button type="button" onClick={onSave} disabled={!saveEnabled || saving}>
-              {saving ? "Saving…" : "Save mappings"}
+            <Button
+              type="button"
+              onClick={onSave}
+              disabled={!saveEnabled || saving}
+              loading={saving}
+              success={saveSuccess}
+            >
+              {saveLabel}
             </Button>
           </div>
         </div>
       </div>
+
+      {saveSuccess ? (
+        <ActionFeedback type="success" className="border-x-0 border-t-0">
+          Mappings saved successfully.
+        </ActionFeedback>
+      ) : null}
 
       {saveError || saveErrors.length > 0 ? (
         <div className="border-b border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">

@@ -119,6 +119,7 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
   const [hubspotSearch, setHubspotSearch] = useState("");
   const [mindbodySearch, setMindbodySearch] = useState("");
   const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveErrors, setSaveErrors] = useState<string[]>([]);
   const [saveWarnings, setSaveWarnings] = useState<string[]>([]);
@@ -230,6 +231,12 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
     void loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    if (!saveSuccess) return;
+    const timer = window.setTimeout(() => setSaveSuccess(false), 2000);
+    return () => window.clearTimeout(timer);
+  }, [saveSuccess]);
+
   const dirty = useMemo(
     () => !mappingsEqual(draftRows, savedSnapshot),
     [draftRows, savedSnapshot]
@@ -292,6 +299,7 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
 
   async function handleSave() {
     setSaving(true);
+    setSaveSuccess(false);
     setSaveError(null);
     setSaveErrors([]);
     setSaveWarnings([]);
@@ -326,6 +334,7 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
       setDraftRows(next);
       setSavedSnapshot(next);
       setSaveWarnings(data.warnings ?? []);
+      setSaveSuccess(true);
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : "Failed to save mappings");
     } finally {
@@ -338,6 +347,7 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
     setSaveError(null);
     setSaveErrors([]);
     setSaveWarnings([]);
+    setSaveSuccess(false);
   }
 
   function handleAddRow() {
@@ -438,6 +448,7 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
               dirty={dirty}
               saveEnabled={canSave}
               saving={saving}
+              saveSuccess={saveSuccess}
               saveError={saveError}
               saveErrors={saveErrors}
               saveWarnings={saveWarnings}
