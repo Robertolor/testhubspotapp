@@ -64,6 +64,11 @@ export async function POST(request: NextRequest) {
   }
 
   if (!tenantId || !signatureKey) {
+    console.warn("[mindbody-webhook] rejected: unknown tenant", {
+      siteId,
+      eventId: payload.eventId,
+      hasReferenceId: Boolean(payload.referenceId),
+    });
     return NextResponse.json(
       { error: "Unknown tenant or subscription" },
       { status: 404 }
@@ -72,6 +77,11 @@ export async function POST(request: NextRequest) {
 
   const valid = verifyMindbodyWebhook(rawBody, signature, signatureKey);
   if (!valid) {
+    console.warn("[mindbody-webhook] rejected: invalid signature", {
+      siteId,
+      eventId: payload.eventId,
+      messageId: payload.messageId,
+    });
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
