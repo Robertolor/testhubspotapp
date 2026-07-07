@@ -8,11 +8,27 @@ import {
 import { getAppUrl } from "@/lib/utils";
 
 interface SubscriptionResponse {
-  id: string;
-  messageSignatureKey: string;
-  status: string;
-  webhookUrl: string;
-  eventIds: string[];
+  id?: string;
+  subscriptionId?: string;
+  SubscriptionId?: string;
+  messageSignatureKey?: string;
+  MessageSignatureKey?: string;
+  status?: string;
+  Status?: string;
+  webhookUrl?: string;
+  eventIds?: string[];
+}
+
+function subscriptionIdFrom(data: SubscriptionResponse): string {
+  const id = data.SubscriptionId ?? data.subscriptionId ?? data.id;
+  if (!id) {
+    throw new Error("Mindbody subscription response missing id");
+  }
+  return id;
+}
+
+function messageSignatureKeyFrom(data: SubscriptionResponse): string | undefined {
+  return data.MessageSignatureKey ?? data.messageSignatureKey;
 }
 
 export async function ensureMindbodyWebhookSubscription(
@@ -53,9 +69,10 @@ export async function ensureMindbodyWebhookSubscription(
   }
 
   const sub = (await createRes.json()) as SubscriptionResponse;
+  const subscriptionId = subscriptionIdFrom(sub);
 
   const patchRes = await fetch(
-    `${MINDBODY_WEBHOOKS_API}/subscriptions/${sub.id}`,
+    `${MINDBODY_WEBHOOKS_API}/subscriptions/${subscriptionId}`,
     {
       method: "PATCH",
       headers: {
@@ -78,12 +95,15 @@ export async function ensureMindbodyWebhookSubscription(
 
   const activated = (await patchRes.json()) as SubscriptionResponse;
   const sigKey =
-    activated.messageSignatureKey || sub.messageSignatureKey;
+    messageSignatureKeyFrom(activated) ?? messageSignatureKeyFrom(sub);
+  if (!sigKey) {
+    throw new Error("Mindbody subscription response missing message signature key");
+  }
 
   await getSupabase().from("mindbody_webhook_subscriptions").upsert(
     {
       tenant_id: tenantId,
-      subscription_id: sub.id,
+      subscription_id: subscriptionId,
       message_signature_key_encrypted: encryptSecret(sigKey),
       webhook_url: webhookUrl,
       event_ids: [...MINDBODY_WEBHOOK_EVENTS],

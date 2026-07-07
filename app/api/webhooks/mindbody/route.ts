@@ -21,7 +21,11 @@ export async function POST(request: NextRequest) {
   }
 
   const siteId = Number(
-    payload.siteId ?? payload.siteID ?? payload.locationId ?? 0
+    payload.siteId ??
+      payload.siteID ??
+      payload.locationId ??
+      (payload.eventData as Record<string, unknown> | undefined)?.siteId ??
+      0
   );
 
   let tenantId: string | null = null;

@@ -186,7 +186,10 @@ async function processMindbodyEvent(
   }
 
   const eventId = String(event.eventId ?? "");
-  const data = (event.data ?? event) as Record<string, unknown>;
+  const data = (event.eventData ?? event.data ?? event) as Record<
+    string,
+    unknown
+  >;
 
   if (eventId === "client.created" || eventId === "client.updated") {
     const clientId = String(data.clientId ?? data.Id ?? "");
