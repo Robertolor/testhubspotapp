@@ -84,7 +84,8 @@ export async function PUT(
   const denied = await assertTenantAccess(tenantId);
   if (denied) return denied;
 
-  const body = (await request.json()) as {
+  try {
+    const body = (await request.json()) as {
     mindbody?: {
       siteId?: number;
       apiKey?: string;
@@ -214,12 +215,22 @@ export async function PUT(
         .from("mindbody_accounts")
         .update(upsertRow)
         .eq("tenant_id", tenantId);
-      if (updateError) throw updateError;
+      if (updateError) {
+        return NextResponse.json(
+          { error: updateError.message ?? "Failed to update Mindbody account" },
+          { status: 500 }
+        );
+      }
     } else {
       const { error: insertError } = await supabase
         .from("mindbody_accounts")
         .insert(upsertRow);
-      if (insertError) throw insertError;
+      if (insertError) {
+        return NextResponse.json(
+          { error: insertError.message ?? "Failed to save Mindbody account" },
+          { status: 500 }
+        );
+      }
     }
 
     if (staffUsername && staffPassword) {
@@ -259,4 +270,14 @@ export async function PUT(
   }
 
   return NextResponse.json({ ok: true });
+  } catch (e) {
+    console.error("[settings] PUT failed:", e);
+    return NextResponse.json(
+      {
+        error:
+          e instanceof Error ? e.message : "Failed to save settings",
+      },
+      { status: 500 }
+    );
+  }
 }

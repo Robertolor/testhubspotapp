@@ -102,7 +102,21 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
           },
         }),
       });
-      const json = await res.json();
+      const text = await res.text();
+      let json: { error?: string; ok?: boolean } = {};
+      if (text) {
+        try {
+          json = JSON.parse(text) as { error?: string; ok?: boolean };
+        } catch {
+          throw new Error(
+            res.ok
+              ? "Unexpected server response"
+              : `Server error (${res.status})`
+          );
+        }
+      } else if (!res.ok) {
+        throw new Error(`Server error (${res.status})`);
+      }
       if (!res.ok) throw new Error(json.error ?? "Save failed");
       setMessage("Settings saved.");
       setApiKey("");
