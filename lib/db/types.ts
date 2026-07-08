@@ -49,6 +49,14 @@ export interface SyncSettings {
   deals_enabled: boolean;
   deals_direction: SyncDirection;
   hubspot_properties_bootstrapped: boolean;
+  /** Skip purchase/sale deals at or below this amount. null = no filter. */
+  purchases_min_amount: number | null;
+  appointments_enabled: boolean;
+  visits_enabled: boolean;
+  line_items_enabled: boolean;
+  assoc_deal_to_contact: boolean;
+  assoc_line_item_to_deal: boolean;
+  assoc_purchase_to_contract: boolean;
 }
 
 export type MindbodyDealSource = "sale" | "contract";

@@ -97,6 +97,13 @@ export async function PUT(
       contactsDirection?: string;
       dealsEnabled?: boolean;
       dealsDirection?: string;
+      purchasesMinAmount?: number | null;
+      appointmentsEnabled?: boolean;
+      visitsEnabled?: boolean;
+      lineItemsEnabled?: boolean;
+      assocDealToContact?: boolean;
+      assocLineItemToDeal?: boolean;
+      assocPurchaseToContract?: boolean;
     };
     fieldMappings?: {
       entityType: string;
@@ -108,15 +115,47 @@ export async function PUT(
   const supabase = getSupabase();
 
   if (body.sync) {
+    const syncUpdate: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (body.sync.contactsEnabled !== undefined) {
+      syncUpdate.contacts_enabled = body.sync.contactsEnabled;
+    }
+    if (body.sync.contactsDirection !== undefined) {
+      syncUpdate.contacts_direction = body.sync.contactsDirection;
+    }
+    if (body.sync.dealsEnabled !== undefined) {
+      syncUpdate.deals_enabled = body.sync.dealsEnabled;
+    }
+    if (body.sync.dealsDirection !== undefined) {
+      syncUpdate.deals_direction = body.sync.dealsDirection;
+    }
+    if (body.sync.purchasesMinAmount !== undefined) {
+      syncUpdate.purchases_min_amount = body.sync.purchasesMinAmount;
+    }
+    if (body.sync.appointmentsEnabled !== undefined) {
+      syncUpdate.appointments_enabled = body.sync.appointmentsEnabled;
+    }
+    if (body.sync.visitsEnabled !== undefined) {
+      syncUpdate.visits_enabled = body.sync.visitsEnabled;
+    }
+    if (body.sync.lineItemsEnabled !== undefined) {
+      syncUpdate.line_items_enabled = body.sync.lineItemsEnabled;
+    }
+    if (body.sync.assocDealToContact !== undefined) {
+      syncUpdate.assoc_deal_to_contact = body.sync.assocDealToContact;
+    }
+    if (body.sync.assocLineItemToDeal !== undefined) {
+      syncUpdate.assoc_line_item_to_deal = body.sync.assocLineItemToDeal;
+    }
+    if (body.sync.assocPurchaseToContract !== undefined) {
+      syncUpdate.assoc_purchase_to_contract = body.sync.assocPurchaseToContract;
+    }
+
     await supabase
       .from("sync_settings")
-      .update({
-        contacts_enabled: body.sync.contactsEnabled,
-        contacts_direction: body.sync.contactsDirection,
-        deals_enabled: body.sync.dealsEnabled,
-        deals_direction: body.sync.dealsDirection,
-        updated_at: new Date().toISOString(),
-      })
+      .update(syncUpdate)
       .eq("tenant_id", tenantId);
   }
 

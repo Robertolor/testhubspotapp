@@ -1,6 +1,7 @@
 import { getSupabase } from "@/lib/db/client";
 import type { MindbodyAccount, SyncSettings } from "@/lib/db/types";
 import {
+  associateDealToContact,
   searchContactByMindbodyId,
   updateContact,
   upsertContact,
@@ -81,6 +82,13 @@ export async function syncContactMindbodyToHubspot(
     "mindbody"
   );
 
+  await resolvePendingDealContactAssociations(
+    tenantId,
+    client.Id,
+    hubspotId,
+    accessToken
+  );
+
   return { hubspotId };
 }
 
@@ -159,4 +167,50 @@ async function upsertEntityMapping(
     },
     { onConflict: "tenant_id,entity_type,hubspot_id" }
   );
+}
+
+async function resolvePendingDealContactAssociations(
+  tenantId: string,
+  mindbodyClientId: string,
+  hubspotContactId: string,
+  accessToken: string
+): Promise<void> {
+  const nowIso = new Date().toISOString();
+  const { data } = await getSupabase()
+    .from("pending_deal_contact_links")
+    .select("id, deal_hubspot_id, attempts")
+    .eq("tenant_id", tenantId)
+    .eq("mindbody_client_id", mindbodyClientId)
+    .lte("next_attempt_at", nowIso)
+    .order("created_at", { ascending: true })
+    .limit(100);
+
+  if (!data?.length) return;
+
+  for (const row of data) {
+    try {
+      await associateDealToContact(
+        accessToken,
+        String(row.deal_hubspot_id),
+        hubspotContactId
+      );
+      await getSupabase()
+        .from("pending_deal_contact_links")
+        .delete()
+        .eq("id", String(row.id));
+    } catch (error) {
+      const attempts = Number(row.attempts ?? 0) + 1;
+      const nextAttempt = new Date(Date.now() + 5 * 60_000).toISOString();
+      await getSupabase()
+        .from("pending_deal_contact_links")
+        .update({
+          attempts,
+          last_error:
+            error instanceof Error ? error.message : "Association retry failed",
+          next_attempt_at: nextAttempt,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", String(row.id));
+    }
+  }
 }

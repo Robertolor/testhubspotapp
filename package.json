@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "validate:mapping": "npx --yes tsx lib/mapping/validate.self-check.ts",
     "validate:transform": "npx --yes tsx lib/mapping/transform.self-check.ts",
+    "validate:runtime": "npx --yes tsx lib/sync/runtime-rules.self-check.ts",
     "mindbody:webhook-test": "npx --yes tsx scripts/trigger-mindbody-webhook.ts"
   },
   "dependencies": {

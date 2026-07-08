@@ -173,6 +173,23 @@ export async function updateDeal(
   }
 }
 
+export async function associateDealToContact(
+  accessToken: string,
+  dealId: string,
+  contactId: string
+): Promise<void> {
+  const res = await hubspotFetch(
+    accessToken,
+    `/crm/v3/objects/deals/${dealId}/associations/contacts/${contactId}/3`,
+    { method: "PUT" }
+  );
+  if (!res.ok) {
+    throw new Error(
+      `HubSpot associate deal->contact failed: ${await res.text()}`
+    );
+  }
+}
+
 export async function searchContactByMindbodyId(
   accessToken: string,
   mindbodyClientId: string

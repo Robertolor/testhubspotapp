@@ -5,6 +5,7 @@ import type {
   SyncSettings,
 } from "@/lib/db/types";
 import {
+  associateDealToContact,
   createDeal,
   searchDealByMindbodyId,
   updateDeal,
@@ -16,6 +17,43 @@ import {
   applyDealMappings,
   getFieldMappings,
 } from "@/lib/sync/field-mappings";
+import {
+  purchaseQualifiesForSync,
+  shouldAssociateDealToContact,
+} from "@/lib/sync/runtime-rules";
+
+async function queuePendingDealContactAssociation(
+  tenantId: string,
+  dealId: string,
+  mindbodyClientId: string,
+  reason: string
+): Promise<void> {
+  if (!mindbodyClientId) return;
+  await getSupabase().from("pending_deal_contact_links").upsert(
+    {
+      tenant_id: tenantId,
+      deal_hubspot_id: dealId,
+      mindbody_client_id: mindbodyClientId,
+      reason,
+      next_attempt_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "tenant_id,deal_hubspot_id,mindbody_client_id" }
+  );
+}
+
+async function clearPendingDealContactAssociation(
+  tenantId: string,
+  dealId: string,
+  mindbodyClientId: string
+): Promise<void> {
+  await getSupabase()
+    .from("pending_deal_contact_links")
+    .delete()
+    .eq("tenant_id", tenantId)
+    .eq("deal_hubspot_id", dealId)
+    .eq("mindbody_client_id", mindbodyClientId);
+}
 
 export async function syncContractToHubspotDeal(
   tenantId: string,
@@ -46,9 +84,10 @@ export async function syncContractToHubspotDeal(
     clientContractId
   );
 
-  const contactId = clientUniqueId
-    ? await searchContactByMindbodyId(accessToken, clientUniqueId)
-    : null;
+  const contactId =
+    shouldAssociateDealToContact(settings) && clientUniqueId
+      ? await searchContactByMindbodyId(accessToken, clientUniqueId)
+      : null;
 
   const mappings = await getFieldMappings(tenantId, "deal");
   const normalizedPayload: Record<string, unknown> = {
@@ -75,6 +114,9 @@ export async function syncContractToHubspotDeal(
 
   if (dealId) {
     await updateDeal(accessToken, dealId, dealProps);
+    if (contactId && shouldAssociateDealToContact(settings)) {
+      await associateDealToContact(accessToken, dealId, contactId);
+    }
   } else {
     dealId = await createDeal(accessToken, dealProps, contactId ?? undefined);
   }
@@ -92,6 +134,19 @@ export async function syncContractToHubspotDeal(
     },
     { onConflict: "tenant_id,entity_type,hubspot_id" }
   );
+
+  if (shouldAssociateDealToContact(settings)) {
+    if (contactId) {
+      await clearPendingDealContactAssociation(tenantId, dealId, clientUniqueId);
+    } else {
+      await queuePendingDealContactAssociation(
+        tenantId,
+        dealId,
+        clientUniqueId,
+        "Contact was missing when contract webhook was processed"
+      );
+    }
+  }
 
   return { dealId };
 }
@@ -124,9 +179,16 @@ export async function syncSaleToHubspotDeal(
   );
 
   const amount = payload.totalAmount ?? payload.paymentsTotal;
-  const contactId = clientId
-    ? await searchContactByMindbodyId(accessToken, clientId)
-    : null;
+
+  const qualification = purchaseQualifiesForSync(settings, amount);
+  if (!qualification.qualifies) {
+    throw new Error(qualification.reason ?? "Purchase does not qualify for sync");
+  }
+
+  const contactId =
+    shouldAssociateDealToContact(settings) && clientId
+      ? await searchContactByMindbodyId(accessToken, clientId)
+      : null;
 
   const mappings = await getFieldMappings(tenantId, "deal");
   const normalizedPayload: Record<string, unknown> = {
@@ -151,6 +213,9 @@ export async function syncSaleToHubspotDeal(
 
   if (dealId) {
     await updateDeal(accessToken, dealId, dealProps);
+    if (contactId && shouldAssociateDealToContact(settings)) {
+      await associateDealToContact(accessToken, dealId, contactId);
+    }
   } else {
     dealId = await createDeal(accessToken, dealProps, contactId ?? undefined);
   }
@@ -168,6 +233,19 @@ export async function syncSaleToHubspotDeal(
     },
     { onConflict: "tenant_id,entity_type,hubspot_id" }
   );
+
+  if (shouldAssociateDealToContact(settings)) {
+    if (contactId) {
+      await clearPendingDealContactAssociation(tenantId, dealId, clientId);
+    } else {
+      await queuePendingDealContactAssociation(
+        tenantId,
+        dealId,
+        clientId,
+        "Contact was missing when sale webhook was processed"
+      );
+    }
+  }
 
   return { dealId };
 }

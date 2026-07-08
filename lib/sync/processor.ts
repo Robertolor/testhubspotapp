@@ -15,6 +15,7 @@ import {
 } from "@/lib/sync/runs";
 import { ensureHubspotPropertiesForTenant } from "@/lib/sync/ensure-hubspot-properties";
 import type { SyncSettings } from "@/lib/db/types";
+import { normalizeSyncSettings, purchaseQualifiesForSync } from "@/lib/sync/runtime-rules";
 
 export interface ProcessWebhookInput {
   tenantId: string;
@@ -125,7 +126,7 @@ async function getSyncSettings(tenantId: string): Promise<SyncSettings> {
   if (error || !data) {
     throw new Error("Sync settings not found");
   }
-  return data as SyncSettings;
+  return normalizeSyncSettings(data as Record<string, unknown>);
 }
 
 async function processHubspotEvent(
@@ -239,6 +240,20 @@ async function processMindbodyEvent(
   }
 
   if (eventId === "clientSale.created") {
+    const amount = data.totalAmount ?? data.paymentsTotal ?? data.amount;
+    const qualification = purchaseQualifiesForSync(settings, amount);
+    if (!qualification.qualifies) {
+      await logSyncEvent(
+        runId,
+        tenantId,
+        "deal",
+        "mb_to_hs",
+        "skipped",
+        qualification.reason
+      );
+      return;
+    }
+
     const result = await syncSaleToHubspotDeal(
       tenantId,
       hubspotAccount,

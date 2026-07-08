@@ -17,6 +17,7 @@ import {
   completeSyncRun,
   createSyncRun,
 } from "@/lib/sync/runs";
+import { normalizeSyncSettings, purchaseQualifiesForSync } from "@/lib/sync/runtime-rules";
 import { TestSyncLogger } from "@/lib/sync/test-logger";
 
 /** TEMP: sandbox E2E cap — remove or gate behind env before production */
@@ -35,7 +36,7 @@ async function getSyncSettings(tenantId: string): Promise<SyncSettings> {
   if (error || !data) {
     throw new Error("Sync settings not found");
   }
-  return data as SyncSettings;
+  return normalizeSyncSettings(data as Record<string, unknown>);
 }
 
 function normalizeSalePayload(sale: Record<string, unknown>): Record<string, unknown> {
