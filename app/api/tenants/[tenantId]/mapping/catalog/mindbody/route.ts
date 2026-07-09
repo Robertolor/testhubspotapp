@@ -6,10 +6,13 @@ import {
   parseMindbodyCatalogEntity,
 } from "@/lib/mindbody/field-catalog";
 import {
+  listMindbodyAppointmentFields,
   listMindbodyContractFields,
   listMindbodySaleFields,
+  listMindbodyVisitFields,
   parseMindbodyDealCatalogEntity,
 } from "@/lib/mindbody/deal-field-catalog";
+import { listMindbodyLineItemFields } from "@/lib/mindbody/line-item-field-catalog";
 
 export async function GET(
   request: NextRequest,
@@ -25,9 +28,26 @@ export async function GET(
   const contactEntity = parseMindbodyCatalogEntity(entityParam);
   const dealEntity = parseMindbodyDealCatalogEntity(entityParam);
 
+  if (entityParam === "line_item") {
+    const fields = listMindbodyLineItemFields();
+    return NextResponse.json({
+      entity: "line_item",
+      fields: fields.map((field) => ({
+        key: field.key,
+        label: field.label,
+        type: field.type,
+        groupName: "line_item",
+        isCustom: false,
+      })),
+    });
+  }
+
   if (!contactEntity && !dealEntity) {
     return NextResponse.json(
-      { error: "Query param entity must be contact, sale, or contract" },
+      {
+        error:
+          "Query param entity must be contact, sale, contract, appointment, visit, or line_item",
+      },
       { status: 400 }
     );
   }
@@ -36,7 +56,11 @@ export async function GET(
     const fields =
       dealEntity === "sale"
         ? listMindbodySaleFields()
-        : listMindbodyContractFields();
+        : dealEntity === "contract"
+          ? listMindbodyContractFields()
+          : dealEntity === "appointment"
+            ? listMindbodyAppointmentFields()
+            : listMindbodyVisitFields();
     return NextResponse.json({
       entity: dealEntity,
       fields: fields.map((field) => ({

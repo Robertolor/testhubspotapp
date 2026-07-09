@@ -1,6 +1,6 @@
 import { getSupabase } from "@/lib/db/client";
-import type { EntityType, MindbodyDealSource } from "@/lib/db/types";
-import { dealMindbodyFieldsForSource } from "@/lib/mapping/deal-fields";
+import type { EntityType, MindbodyMappingSource } from "@/lib/db/types";
+import { mindbodyFieldsForMapping } from "@/lib/mapping/entity-fields";
 import type { FieldMappingItem } from "@/lib/mapping/fields";
 import { toFieldMappingItem } from "@/lib/mapping/fields";
 import { listMindbodyContactFields } from "@/lib/mindbody/field-catalog";
@@ -35,13 +35,17 @@ interface HubspotCatalogEntry extends HubspotPropertyRef {
   groupName: string;
 }
 
-function hubspotObjectForEntity(entity: EntityType): HubspotCatalogObject {
-  return entity === "contact" ? "contacts" : "deals";
+function hubspotObjectForEntity(
+  entity: EntityType
+): HubspotCatalogObject {
+  if (entity === "contact") return "contacts";
+  if (entity === "line_item") return "line_items";
+  return "deals";
 }
 
 function systemPairsForEntity(
   entity: EntityType,
-  mindbodySource?: MindbodyDealSource
+  mindbodySource?: MindbodyMappingSource
 ): MappingRowRef[] {
   if (entity === "contact") return SYSTEM_CONTACT_MAPPING_PAIRS;
   if (mindbodySource === "sale") return SYSTEM_SALE_MAPPING_PAIRS;
@@ -53,7 +57,7 @@ function resolveIsSystem(
   entity: EntityType,
   hubspotProperty: string,
   existing: MappingRowRef[],
-  mindbodySource?: MindbodyDealSource
+  mindbodySource?: MindbodyMappingSource
 ): boolean {
   const prev = existing.find((row) => row.hubspotProperty === hubspotProperty);
   if (prev?.isSystem) return true;
@@ -95,22 +99,19 @@ async function loadHubspotCatalog(
 async function loadMindbodyCatalog(
   tenantId: string,
   entity: EntityType,
-  mindbodySource?: MindbodyDealSource
+  mindbodySource?: MindbodyMappingSource
 ): Promise<MindbodyFieldRef[]> {
-  if (entity === "deal") {
-    if (!mindbodySource) {
-      throw new Error("Deal mappings require mindbodySource (sale or contract)");
+  if (entity === "contact") {
+    const mindbodyAccount = await getMindbodyAccountByTenant(tenantId);
+    if (!mindbodyAccount?.api_key_encrypted) {
+      throw new Error("Mindbody is not configured for this tenant");
     }
-    return dealMindbodyFieldsForSource(mindbodySource);
+
+    const fields = await listMindbodyContactFields(mindbodyAccount);
+    return fields.map((field) => ({ key: field.key, type: field.type }));
   }
 
-  const mindbodyAccount = await getMindbodyAccountByTenant(tenantId);
-  if (!mindbodyAccount?.api_key_encrypted) {
-    throw new Error("Mindbody is not configured for this tenant");
-  }
-
-  const fields = await listMindbodyContactFields(mindbodyAccount);
-  return fields.map((field) => ({ key: field.key, type: field.type }));
+  return mindbodyFieldsForMapping(entity, mindbodySource);
 }
 
 function mergeValidation(
@@ -135,12 +136,12 @@ export async function saveEntityFieldMappings(
   tenantId: string,
   entity: EntityType,
   proposed: SaveMappingInput[],
-  options?: { mindbodySource?: MindbodyDealSource }
+  options?: { mindbodySource?: MindbodyMappingSource }
 ): Promise<{ mappings: FieldMappingItem[]; warnings: string[] }> {
   const mindbodySource = entity === "deal" ? options?.mindbodySource : undefined;
   if (entity === "deal" && !mindbodySource) {
     throw new SaveMappingsError(
-      "Deal mappings require mindbodySource (sale or contract).",
+      "Deal mappings require mindbodySource (sale, contract, appointment, or visit).",
       []
     );
   }
@@ -188,10 +189,12 @@ export async function saveEntityFieldMappings(
   const validation =
     entity === "contact"
       ? validateContactMappingSave(before, rows, hubspotCatalog, mindbodyCatalog)
-      : mergeValidation(
-          validateSystemMappingsPreserved(before, rows),
-          validateMappingBatch(rows, hubspotCatalog, mindbodyCatalog)
-        );
+      : entity === "line_item"
+        ? validateMappingBatch(rows, hubspotCatalog, mindbodyCatalog)
+        : mergeValidation(
+            validateSystemMappingsPreserved(before, rows),
+            validateMappingBatch(rows, hubspotCatalog, mindbodyCatalog)
+          );
 
   if (!validation.ok) {
     throw new SaveMappingsError("Invalid field mappings", validation.errors);

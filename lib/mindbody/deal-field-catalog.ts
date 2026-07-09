@@ -1,6 +1,12 @@
-export type MindbodyDealSource = "sale" | "contract";
+import type { MindbodyMappingSource } from "@/lib/db/types";
 
-export type MindbodyDealCatalogEntity = "sale" | "contract";
+export type MindbodyDealSource = MindbodyMappingSource;
+
+export type MindbodyDealCatalogEntity =
+  | "sale"
+  | "contract"
+  | "appointment"
+  | "visit";
 
 export interface MindbodyDealFieldCatalogItem {
   key: string;
@@ -53,6 +59,42 @@ const CONTRACT_FIELDS: DealFieldDef[] = [
   { key: "locationId", label: "Location ID", type: "number", source: "contract" },
 ];
 
+const APPOINTMENT_FIELDS: DealFieldDef[] = [
+  { key: "mindbody_appointment_id", label: "Appointment ID", type: "string", source: "appointment" },
+  { key: "record_key", label: "Record key", type: "string", source: "appointment" },
+  { key: "source_client_reference", label: "Source client reference", type: "string", source: "appointment" },
+  { key: "resolved_contact_client_id", label: "Resolved contact client ID", type: "string", source: "appointment" },
+  { key: "status_raw", label: "Status", type: "string", source: "appointment" },
+  { key: "derived_stage", label: "Derived stage", type: "string", source: "appointment" },
+  { key: "start_datetime", label: "Start date/time", type: "datetime", source: "appointment" },
+  { key: "end_datetime", label: "End date/time", type: "datetime", source: "appointment" },
+  { key: "session_type_id", label: "Session type ID", type: "string", source: "appointment" },
+  { key: "appointment_name", label: "Appointment name", type: "string", source: "appointment" },
+  { key: "staff_id", label: "Staff ID", type: "string", source: "appointment" },
+  { key: "staff_name", label: "Staff name", type: "string", source: "appointment" },
+  { key: "resource_ids", label: "Resource IDs", type: "string", source: "appointment" },
+  { key: "resource_names", label: "Resource names", type: "string", source: "appointment" },
+  { key: "deal_name", label: "Deal name", type: "string", source: "appointment" },
+];
+
+const VISIT_FIELDS: DealFieldDef[] = [
+  { key: "mindbody_visit_id", label: "Visit ID", type: "string", source: "visit" },
+  { key: "record_key", label: "Record key", type: "string", source: "visit" },
+  { key: "source_client_id", label: "Source client ID", type: "string", source: "visit" },
+  { key: "start_datetime", label: "Start date/time", type: "datetime", source: "visit" },
+  { key: "end_datetime", label: "End date/time", type: "datetime", source: "visit" },
+  { key: "visit_name", label: "Visit name", type: "string", source: "visit" },
+  { key: "service_name", label: "Service name", type: "string", source: "visit" },
+  { key: "status_raw", label: "Status", type: "string", source: "visit" },
+  { key: "derived_stage", label: "Derived stage", type: "string", source: "visit" },
+  { key: "program_id", label: "Program ID", type: "string", source: "visit" },
+  { key: "program_name", label: "Program name", type: "string", source: "visit" },
+  { key: "schedule_type", label: "Schedule type", type: "string", source: "visit" },
+  { key: "staff_id", label: "Staff ID", type: "string", source: "visit" },
+  { key: "staff_name", label: "Staff name", type: "string", source: "visit" },
+  { key: "deal_name", label: "Deal name", type: "string", source: "visit" },
+];
+
 const SALE_PRIORITY = new Set(["saleId", "totalAmount", "clientId"]);
 const CONTRACT_PRIORITY = new Set([
   "clientContractId",
@@ -74,7 +116,14 @@ function sortDealFields(items: MindbodyDealFieldCatalogItem[]): MindbodyDealFiel
 export function parseMindbodyDealCatalogEntity(
   value: string | null
 ): MindbodyDealCatalogEntity | null {
-  if (value === "sale" || value === "contract") return value;
+  if (
+    value === "sale" ||
+    value === "contract" ||
+    value === "appointment" ||
+    value === "visit"
+  ) {
+    return value;
+  }
   return null;
 }
 
@@ -86,14 +135,33 @@ export function listMindbodyContractFields(): MindbodyDealFieldCatalogItem[] {
   return sortDealFields(CONTRACT_FIELDS);
 }
 
+export function listMindbodyAppointmentFields(): MindbodyDealFieldCatalogItem[] {
+  return sortDealFields(APPOINTMENT_FIELDS);
+}
+
+export function listMindbodyVisitFields(): MindbodyDealFieldCatalogItem[] {
+  return sortDealFields(VISIT_FIELDS);
+}
+
 export function listMindbodyDealFieldsForSource(
   source: MindbodyDealSource
 ): MindbodyDealFieldCatalogItem[] {
-  return source === "sale" ? listMindbodySaleFields() : listMindbodyContractFields();
+  switch (source) {
+    case "sale":
+      return listMindbodySaleFields();
+    case "contract":
+      return listMindbodyContractFields();
+    case "appointment":
+      return listMindbodyAppointmentFields();
+    case "visit":
+      return listMindbodyVisitFields();
+  }
 }
 
 export function inferDealMindbodySource(fieldKey: string): MindbodyDealSource | null {
   if (SALE_FIELDS.some((field) => field.key === fieldKey)) return "sale";
   if (CONTRACT_FIELDS.some((field) => field.key === fieldKey)) return "contract";
+  if (APPOINTMENT_FIELDS.some((field) => field.key === fieldKey)) return "appointment";
+  if (VISIT_FIELDS.some((field) => field.key === fieldKey)) return "visit";
   return null;
 }

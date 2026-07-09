@@ -1,5 +1,5 @@
 import { getSupabase } from "@/lib/db/client";
-import type { EntityType, FieldMapping, MindbodyDealSource } from "@/lib/db/types";
+import type { EntityType, FieldMapping, MindbodyMappingSource } from "@/lib/db/types";
 import { extractMindbodyValue, formatForHubspot, mapMindbodyFieldsToHubspot } from "@/lib/mapping/transform";
 
 type DefaultFieldMapping = Omit<FieldMapping, "id" | "tenant_id" | "created_at">;
@@ -116,7 +116,7 @@ export async function seedDefaultFieldMappings(tenantId: string): Promise<void> 
 export async function getFieldMappings(
   tenantId: string,
   entityType: EntityType,
-  options?: { mindbodySource?: MindbodyDealSource }
+  options?: { mindbodySource?: MindbodyMappingSource }
 ): Promise<FieldMapping[]> {
   let query = getSupabase()
     .from("field_mappings")
@@ -135,7 +135,7 @@ export async function getFieldMappings(
 
 export function filterDealMappingsForSource(
   mappings: FieldMapping[],
-  source: MindbodyDealSource
+  source: MindbodyMappingSource
 ): FieldMapping[] {
   return mappings.filter(
     (mapping) =>
@@ -146,7 +146,7 @@ export function filterDealMappingsForSource(
 export function applyDealMappings(
   mappings: FieldMapping[],
   payload: Record<string, unknown>,
-  source: MindbodyDealSource
+  source: MindbodyMappingSource
 ): Record<string, string> {
   const scoped = filterDealMappingsForSource(mappings, source);
   return mapMindbodyFieldsToHubspot(scoped, payload);

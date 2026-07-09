@@ -25,6 +25,20 @@ Per-tenant toggles in **Settings → Runtime sync controls**:
 
 **Turn off a broken feature** without redeploying: disable the toggle and save.
 
+## Mapping tabs (Settings → Field mappings)
+
+Expanded entity tabs appear in Field mappings when enabled in Runtime sync controls:
+
+| Settings toggle | Mapping tab |
+|-----------------|-------------|
+| (always on) | Contacts |
+| (always on) | Deals → Contracts / Sales |
+| Appointments | Deals → Appointments |
+| Visits | Deals → Visits |
+| Line items | Line items |
+
+Mappings can be configured before sync ships for that entity type.
+
 ## Out-of-order webhooks
 
 Mindbody events can arrive out of order (for example, sale/contract before contact).

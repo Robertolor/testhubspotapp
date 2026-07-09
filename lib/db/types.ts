@@ -1,6 +1,6 @@
 export type TenantStatus = "pending" | "active" | "suspended";
 export type SyncDirection = "mb_to_hs" | "hs_to_mb" | "bidirectional";
-export type EntityType = "contact" | "deal";
+export type EntityType = "contact" | "deal" | "line_item";
 export type SyncSource = "hubspot" | "mindbody" | "manual";
 export type WebhookSource = "hubspot" | "mindbody";
 export type DeliveryStatus =
@@ -59,7 +59,14 @@ export interface SyncSettings {
   assoc_purchase_to_contract: boolean;
 }
 
-export type MindbodyDealSource = "sale" | "contract";
+export type MindbodyMappingSource =
+  | "sale"
+  | "contract"
+  | "appointment"
+  | "visit";
+
+/** @deprecated Use MindbodyMappingSource */
+export type MindbodyDealSource = MindbodyMappingSource;
 
 export interface FieldMapping {
   id: string;
@@ -71,7 +78,7 @@ export interface FieldMapping {
   is_system: boolean;
   hubspot_property_type: string | null;
   mindbody_field_type: string | null;
-  mindbody_source: MindbodyDealSource | null;
+  mindbody_source: MindbodyMappingSource | null;
 }
 
 export interface EntityMapping {

@@ -24,7 +24,7 @@ export async function GET(
   );
   if (!object) {
     return NextResponse.json(
-      { error: "Query param object must be contacts or deals" },
+      { error: "Query param object must be contacts, deals, or line_items" },
       { status: 400 }
     );
   }

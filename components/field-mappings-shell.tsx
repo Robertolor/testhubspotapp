@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card, CardTitle } from "@/components/ui/card";
 import {
@@ -15,17 +16,18 @@ import {
   type DraftMappingRow,
 } from "@/components/mappings-editor-panel";
 import type { PickerOption } from "@/components/mapping-field-picker";
-import type { MindbodyDealSource } from "@/lib/db/types";
+import type { MindbodyMappingSource } from "@/lib/db/types";
 import { cn } from "@/lib/utils";
 
-type MappingEntityTab = "contact" | "deal";
+type MappingEntityTab = "contact" | "deal" | "line_item";
 
-const TABS: { id: MappingEntityTab; label: string }[] = [
-  { id: "contact", label: "Contacts" },
-  { id: "deal", label: "Deals" },
-];
+interface RuntimeSettings {
+  appointments_enabled: boolean;
+  visits_enabled: boolean;
+  line_items_enabled: boolean;
+}
 
-const DEAL_SOURCE_TABS: { id: MindbodyDealSource; label: string }[] = [
+const BASE_DEAL_SOURCE_TABS: { id: MindbodyMappingSource; label: string }[] = [
   { id: "contract", label: "Contracts" },
   { id: "sale", label: "Sales" },
 ];
@@ -99,9 +101,28 @@ function mappingsEqual(a: DraftMappingRow[], b: DraftMappingRow[]): boolean {
   );
 }
 
+function dealSourceLabel(source: MindbodyMappingSource): string {
+  switch (source) {
+    case "contract":
+      return "contracts";
+    case "sale":
+      return "sales";
+    case "appointment":
+      return "appointments";
+    case "visit":
+      return "visits";
+  }
+}
+
 export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
   const [entity, setEntity] = useState<MappingEntityTab>("contact");
-  const [dealSource, setDealSource] = useState<MindbodyDealSource>("contract");
+  const [dealSource, setDealSource] =
+    useState<MindbodyMappingSource>("contract");
+  const [runtimeSettings, setRuntimeSettings] = useState<RuntimeSettings>({
+    appointments_enabled: false,
+    visits_enabled: false,
+    line_items_enabled: false,
+  });
   const [loading, setLoading] = useState(true);
   const [hubspotError, setHubspotError] = useState<string | null>(null);
   const [mindbodyError, setMindbodyError] = useState<string | null>(null);
@@ -124,6 +145,57 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
   const [saveErrors, setSaveErrors] = useState<string[]>([]);
   const [saveWarnings, setSaveWarnings] = useState<string[]>([]);
 
+  useEffect(() => {
+    fetch(`/api/tenants/${tenantId}/settings`)
+      .then((r) => r.json())
+      .then((data: { settings?: RuntimeSettings }) => {
+        if (data.settings) {
+          setRuntimeSettings({
+            appointments_enabled: data.settings.appointments_enabled ?? false,
+            visits_enabled: data.settings.visits_enabled ?? false,
+            line_items_enabled: data.settings.line_items_enabled ?? false,
+          });
+        }
+      })
+      .catch(() => {
+        // Keep defaults if settings cannot be loaded.
+      });
+  }, [tenantId]);
+
+  const mainTabs = useMemo(() => {
+    const tabs: { id: MappingEntityTab; label: string }[] = [
+      { id: "contact", label: "Contacts" },
+      { id: "deal", label: "Deals" },
+    ];
+    if (runtimeSettings.line_items_enabled) {
+      tabs.push({ id: "line_item", label: "Line items" });
+    }
+    return tabs;
+  }, [runtimeSettings.line_items_enabled]);
+
+  const dealSourceTabs = useMemo(() => {
+    const tabs = [...BASE_DEAL_SOURCE_TABS];
+    if (runtimeSettings.appointments_enabled) {
+      tabs.push({ id: "appointment", label: "Appointments" });
+    }
+    if (runtimeSettings.visits_enabled) {
+      tabs.push({ id: "visit", label: "Visits" });
+    }
+    return tabs;
+  }, [runtimeSettings.appointments_enabled, runtimeSettings.visits_enabled]);
+
+  useEffect(() => {
+    if (!mainTabs.some((tab) => tab.id === entity)) {
+      setEntity(mainTabs[0]?.id ?? "contact");
+    }
+  }, [entity, mainTabs]);
+
+  useEffect(() => {
+    if (!dealSourceTabs.some((tab) => tab.id === dealSource)) {
+      setDealSource(dealSourceTabs[0]?.id ?? "contract");
+    }
+  }, [dealSource, dealSourceTabs]);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     setHubspotError(null);
@@ -135,7 +207,12 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
     setHubspotSearch("");
     setMindbodySearch("");
 
-    const hubspotObject = entity === "contact" ? "contacts" : "deals";
+    const hubspotObject =
+      entity === "contact"
+        ? "contacts"
+        : entity === "line_item"
+          ? "line_items"
+          : "deals";
 
     let hubspotProperties: HubspotCatalogProperty[] = [];
     let mindbodyFields: MindbodyCatalogField[] = [];
@@ -159,42 +236,29 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
       );
     }
 
-    if (entity === "contact") {
-      try {
-        const res = await fetch(
-          `/api/tenants/${tenantId}/mapping/catalog/mindbody?entity=contact`
-        );
-        const data = (await res.json()) as {
-          fields?: MindbodyCatalogField[];
-          error?: string;
-        };
-        if (!res.ok) {
-          throw new Error(data.error ?? "Failed to load Mindbody catalog");
-        }
-        mindbodyFields = data.fields ?? [];
-      } catch (e) {
-        setMindbodyError(
-          e instanceof Error ? e.message : "Failed to load Mindbody catalog"
-        );
+    const mindbodyEntity =
+      entity === "contact"
+        ? "contact"
+        : entity === "line_item"
+          ? "line_item"
+          : dealSource;
+
+    try {
+      const res = await fetch(
+        `/api/tenants/${tenantId}/mapping/catalog/mindbody?entity=${mindbodyEntity}`
+      );
+      const data = (await res.json()) as {
+        fields?: MindbodyCatalogField[];
+        error?: string;
+      };
+      if (!res.ok) {
+        throw new Error(data.error ?? "Failed to load Mindbody catalog");
       }
-    } else {
-      try {
-        const res = await fetch(
-          `/api/tenants/${tenantId}/mapping/catalog/mindbody?entity=${dealSource}`
-        );
-        const data = (await res.json()) as {
-          fields?: MindbodyCatalogField[];
-          error?: string;
-        };
-        if (!res.ok) {
-          throw new Error(data.error ?? "Failed to load Mindbody catalog");
-        }
-        mindbodyFields = data.fields ?? [];
-      } catch (e) {
-        setMindbodyError(
-          e instanceof Error ? e.message : "Failed to load Mindbody catalog"
-        );
-      }
+      mindbodyFields = data.fields ?? [];
+    } catch (e) {
+      setMindbodyError(
+        e instanceof Error ? e.message : "Failed to load Mindbody catalog"
+      );
     }
 
     try {
@@ -376,21 +440,66 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
   const heading =
     entity === "contact"
       ? "Contact mappings"
-      : dealSource === "contract"
-        ? "Deal mappings — contracts"
-        : "Deal mappings — sales";
+      : entity === "line_item"
+        ? "Line item mappings"
+        : `Deal mappings — ${dealSourceLabel(dealSource)}`;
 
   const helperText =
     entity === "contact"
       ? "Use + Add mapping and Remove on non-system rows, then save. Email and Client ID stay locked."
-      : dealSource === "contract"
-        ? "Map Mindbody contract fields to HubSpot deal properties. Contract ID stays locked when configured as a system row."
-        : "Map Mindbody sale fields to HubSpot deal properties. Sale ID stays locked when configured as a system row.";
+      : entity === "line_item"
+        ? "Map Mindbody purchase line item fields to HubSpot line item properties. Sync starts when line items are enabled in Settings."
+        : dealSource === "contract"
+          ? "Map Mindbody contract fields to HubSpot deal properties. Contract ID stays locked when configured as a system row."
+          : dealSource === "sale"
+            ? "Map Mindbody sale fields to HubSpot deal properties. Sale ID stays locked when configured as a system row."
+            : `Map Mindbody ${dealSourceLabel(dealSource)} fields to HubSpot deal properties. Sync starts when ${dealSourceLabel(dealSource)} are enabled in Settings.`;
+
+  const mindbodyCatalogTitle =
+    entity === "contact"
+      ? "Mindbody fields"
+      : entity === "line_item"
+        ? "Mindbody line item fields"
+        : `Mindbody ${dealSourceLabel(dealSource)} fields`;
+
+  const mindbodyCatalogDescription =
+    entity === "contact"
+      ? "Client fields from your Mindbody site"
+      : entity === "line_item"
+        ? "Fields from Mindbody purchase line items"
+        : `Fields from Mindbody ${dealSourceLabel(dealSource)}`;
+
+  const hubspotCatalogDescription =
+    entity === "contact"
+      ? "Contact properties from your portal"
+      : entity === "line_item"
+        ? "Line item properties from your portal"
+        : "Deal properties from your portal";
+
+  const hasExpandedEntities =
+    runtimeSettings.appointments_enabled ||
+    runtimeSettings.visits_enabled ||
+    runtimeSettings.line_items_enabled;
 
   return (
     <div className="mt-6">
-      <div className="flex gap-1 rounded-lg border border-slate-200 bg-slate-100 p-1">
-        {TABS.map((tab) => (
+      <p className="text-sm text-slate-600">
+        Appointments, visits, and line items appear here after you enable them in{" "}
+        <Link href="/settings" className="font-medium text-teal-700 underline">
+          Settings → Runtime sync controls
+        </Link>
+        . Mapping configuration is saved even before sync ships.
+      </p>
+
+      {!hasExpandedEntities ? (
+        <p className="mt-2 text-xs text-slate-500">
+          Only contacts and deals (contracts/sales) are shown until expanded
+          entities are enabled.
+        </p>
+      ) : null}
+
+      <div className="mt-4 flex gap-1 rounded-lg border border-slate-200 bg-slate-100 p-1">
+        {mainTabs.map((tab) => (
           <button
             key={tab.id}
             type="button"
@@ -408,14 +517,14 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
       </div>
 
       {entity === "deal" ? (
-        <div className="mt-3 flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
-          {DEAL_SOURCE_TABS.map((tab) => (
+        <div className="mt-3 flex flex-wrap gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
+          {dealSourceTabs.map((tab) => (
             <button
               key={tab.id}
               type="button"
               onClick={() => setDealSource(tab.id)}
               className={cn(
-                "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
                 dealSource === tab.id
                   ? "bg-white text-teal-800 shadow-sm"
                   : "text-slate-600 hover:text-slate-900"
@@ -452,7 +561,7 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
               saveError={saveError}
               saveErrors={saveErrors}
               saveWarnings={saveWarnings}
-              canEditMindbody={entity === "contact" || entity === "deal"}
+              canEditMindbody
               onRowsChange={setDraftRows}
               onSave={() => void handleSave()}
               onCancel={handleCancel}
@@ -471,11 +580,7 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
                 <div className="grid gap-4 lg:grid-cols-2">
                   <MappingCatalogPanel
                     title="HubSpot properties"
-                    description={
-                      entity === "contact"
-                        ? "Contact properties from your portal"
-                        : "Deal properties from your portal"
-                    }
+                    description={hubspotCatalogDescription}
                     search={hubspotSearch}
                     onSearchChange={setHubspotSearch}
                     loading={false}
@@ -483,37 +588,16 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
                     items={filteredHubspot}
                     totalCount={hubspotItems.length}
                   />
-                  {entity === "contact" ? (
-                    <MappingCatalogPanel
-                      title="Mindbody fields"
-                      description="Client fields from your Mindbody site"
-                      search={mindbodySearch}
-                      onSearchChange={setMindbodySearch}
-                      loading={false}
-                      error={mindbodyError}
-                      items={filteredMindbody}
-                      totalCount={mindbodyItems.length}
-                    />
-                  ) : (
-                    <MappingCatalogPanel
-                      title={
-                        dealSource === "contract"
-                          ? "Mindbody contract fields"
-                          : "Mindbody sale fields"
-                      }
-                      description={
-                        dealSource === "contract"
-                          ? "Fields from Mindbody client contracts"
-                          : "Fields from Mindbody sales"
-                      }
-                      search={mindbodySearch}
-                      onSearchChange={setMindbodySearch}
-                      loading={false}
-                      error={mindbodyError}
-                      items={filterCatalogItems(mindbodyItems, mindbodySearch)}
-                      totalCount={mindbodyItems.length}
-                    />
-                  )}
+                  <MappingCatalogPanel
+                    title={mindbodyCatalogTitle}
+                    description={mindbodyCatalogDescription}
+                    search={mindbodySearch}
+                    onSearchChange={setMindbodySearch}
+                    loading={false}
+                    error={mindbodyError}
+                    items={filteredMindbody}
+                    totalCount={mindbodyItems.length}
+                  />
                 </div>
               </div>
             </details>

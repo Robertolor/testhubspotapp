@@ -1,6 +1,6 @@
 const HS_BASE = "https://api.hubapi.com";
 
-export type HubspotCatalogObject = "contacts" | "deals";
+export type HubspotCatalogObject = "contacts" | "deals" | "line_items";
 
 export interface HubspotPropertyCatalogItem {
   name: string;
@@ -36,7 +36,9 @@ function sortCatalogItems(
 export function parseHubspotCatalogObject(
   value: string | null
 ): HubspotCatalogObject | null {
-  if (value === "contacts" || value === "deals") return value;
+  if (value === "contacts" || value === "deals" || value === "line_items") {
+    return value;
+  }
   return null;
 }
 
