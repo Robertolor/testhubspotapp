@@ -38,6 +38,13 @@ const DEAL_PROPERTIES = [
     groupName: "mindbody_sync",
   },
   {
+    name: "mindbody_appointment_id",
+    label: "Mindbody Appointment ID",
+    type: "string",
+    fieldType: "text",
+    groupName: "mindbody_sync",
+  },
+  {
     name: "mindbody_client_id",
     label: "Mindbody Client ID",
     type: "string",
@@ -53,6 +60,7 @@ const DEAL_PROPERTIES = [
     options: [
       { label: "Contract", value: "mindbody_contract" },
       { label: "Sale", value: "mindbody_sale" },
+      { label: "Appointment", value: "mindbody_appointment" },
     ],
   },
 ] as const;
@@ -117,5 +125,52 @@ export async function bootstrapHubspotProperties(
   }
   for (const prop of DEAL_PROPERTIES) {
     await ensureProperty(accessToken, "deals", prop);
+  }
+
+  await ensureDealSourceOptions(accessToken);
+}
+
+async function ensureDealSourceOptions(accessToken: string): Promise<void> {
+  const desired = [
+    { label: "Contract", value: "mindbody_contract" },
+    { label: "Sale", value: "mindbody_sale" },
+    { label: "Appointment", value: "mindbody_appointment" },
+  ];
+
+  const getRes = await fetch(
+    "https://api.hubapi.com/crm/v3/properties/deals/deal_source",
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }
+  );
+  if (!getRes.ok) return;
+
+  const existing = (await getRes.json()) as {
+    options?: { label: string; value: string }[];
+  };
+  const current = existing.options ?? [];
+  const values = new Set(current.map((o) => o.value));
+  const merged = [...current];
+  for (const option of desired) {
+    if (!values.has(option.value)) merged.push(option);
+  }
+  if (merged.length === current.length) return;
+
+  const patchRes = await fetch(
+    "https://api.hubapi.com/crm/v3/properties/deals/deal_source",
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ options: merged }),
+    }
+  );
+  if (!patchRes.ok) {
+    console.warn(
+      "[hubspot] Failed to update deal_source options:",
+      await patchRes.text()
+    );
   }
 }

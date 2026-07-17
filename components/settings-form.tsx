@@ -459,7 +459,8 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
               Expanded entities
             </p>
             <p className="mt-1 text-xs text-slate-500">
-              Appointments, visits, and line items sync in a future release.
+              Appointments sync via Test sync deals when enabled. Visits and
+              line items still map-only until sync ships.
             </p>
             <div className="mt-3 space-y-2">
               <ToggleRow
@@ -544,9 +545,11 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
         <CardTitle>Sandbox test sync (temporary)</CardTitle>
         <p className="mt-1 text-sm text-slate-600">
           Syncs at most <strong>20</strong> contacts or deals from Mindbody for
-          E2E validation. Detailed steps are logged in Reports and Vercel
-          function logs. Use this instead of full backfill on shared sandbox
-          site <code className="text-xs">-99</code>.
+          E2E validation. When Appointments are enabled in Runtime controls,
+          deal test sync also pulls recent staff appointments. Detailed steps
+          are logged in Reports and Vercel function logs. Use this instead of
+          full backfill on shared sandbox site{" "}
+          <code className="text-xs">-99</code>.
         </p>
         {testSyncFeedback ? (
           <ActionFeedback

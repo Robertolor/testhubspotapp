@@ -220,7 +220,10 @@ export async function searchContactByMindbodyId(
 
 export async function searchDealByMindbodyId(
   accessToken: string,
-  propertyName: "mindbody_contract_id" | "mindbody_sale_id",
+  propertyName:
+    | "mindbody_contract_id"
+    | "mindbody_sale_id"
+    | "mindbody_appointment_id",
   value: string
 ): Promise<string | null> {
   const res = await hubspotFetch(accessToken, `/crm/v3/objects/deals/search`, {

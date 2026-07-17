@@ -18,7 +18,7 @@ Per-tenant toggles in **Settings → Runtime sync controls**:
 | Control | Default | Effect |
 |---------|---------|--------|
 | Min purchase amount | empty (no filter) | Skips sale/purchase deals at or below threshold |
-| Appointments / Visits / Line items | off | No-op until entity sync ships; safe to configure early |
+| Appointments / Visits / Line items | off | Appointments: sync via test/deal path when on. Visits/line items: map-only until sync ships |
 | Link deals to contacts | on | Matches current `createDeal` association behavior |
 | Link line items to deals | off | No-op until line item sync ships |
 | Link purchases to contracts | off | No-op until purchase↔contract association ships |

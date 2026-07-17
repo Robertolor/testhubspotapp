@@ -256,3 +256,40 @@ export async function listMindbodySales(
   };
   return data.Sales ?? [];
 }
+
+export interface ListStaffAppointmentsOptions {
+  startDate: string;
+  endDate: string;
+  offset?: number;
+  limit?: number;
+}
+
+/** Pull staff appointments for a date window (Mindbody Public API v6). */
+export async function listMindbodyStaffAppointments(
+  account: MindbodyAccount,
+  options: ListStaffAppointmentsOptions
+): Promise<Record<string, unknown>[]> {
+  const limit = options.limit ?? 100;
+  const offset = options.offset ?? 0;
+  const res = await mindbodyRequestForAccount(
+    account,
+    "GET",
+    "/appointment/staffappointments",
+    {
+      "request.startDate": options.startDate,
+      "request.endDate": options.endDate,
+      "request.limit": String(limit),
+      "request.offset": String(offset),
+    }
+  );
+  if (!res.ok) {
+    throw new Error(
+      `Mindbody list staff appointments failed: ${await res.text()}`
+    );
+  }
+  const data = (await res.json()) as {
+    Appointments?: Record<string, unknown>[];
+    StaffAppointments?: Record<string, unknown>[];
+  };
+  return data.Appointments ?? data.StaffAppointments ?? [];
+}
