@@ -293,3 +293,42 @@ export async function listMindbodyStaffAppointments(
   };
   return data.Appointments ?? data.StaffAppointments ?? [];
 }
+
+export interface ListClientVisitsOptions {
+  clientId: string;
+  startDate: string;
+  endDate: string;
+  offset?: number;
+  limit?: number;
+}
+
+/** Pull visits for one client in a date window (Mindbody Public API v6). */
+export async function listMindbodyClientVisits(
+  account: MindbodyAccount,
+  options: ListClientVisitsOptions
+): Promise<Record<string, unknown>[]> {
+  const limit = options.limit ?? 100;
+  const offset = options.offset ?? 0;
+  const res = await mindbodyRequestForAccount(
+    account,
+    "GET",
+    "/client/clientvisits",
+    {
+      "request.clientId": options.clientId,
+      "request.startDate": options.startDate,
+      "request.endDate": options.endDate,
+      "request.limit": String(limit),
+      "request.offset": String(offset),
+    }
+  );
+  if (!res.ok) {
+    throw new Error(
+      `Mindbody list client visits failed: ${await res.text()}`
+    );
+  }
+  const data = (await res.json()) as {
+    Visits?: Record<string, unknown>[];
+    ClientVisits?: Record<string, unknown>[];
+  };
+  return data.Visits ?? data.ClientVisits ?? [];
+}

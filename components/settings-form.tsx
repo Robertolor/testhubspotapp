@@ -459,8 +459,8 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
               Expanded entities
             </p>
             <p className="mt-1 text-xs text-slate-500">
-              Appointments sync via Test sync deals when enabled. Visits and
-              line items still map-only until sync ships.
+              Appointments and visits sync via Test sync deals when enabled.
+              Line items still map-only until sync ships.
             </p>
             <div className="mt-3 space-y-2">
               <ToggleRow

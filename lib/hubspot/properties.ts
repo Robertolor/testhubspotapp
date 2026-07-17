@@ -45,6 +45,13 @@ const DEAL_PROPERTIES = [
     groupName: "mindbody_sync",
   },
   {
+    name: "mindbody_visit_id",
+    label: "Mindbody Visit ID",
+    type: "string",
+    fieldType: "text",
+    groupName: "mindbody_sync",
+  },
+  {
     name: "mindbody_client_id",
     label: "Mindbody Client ID",
     type: "string",
@@ -61,6 +68,7 @@ const DEAL_PROPERTIES = [
       { label: "Contract", value: "mindbody_contract" },
       { label: "Sale", value: "mindbody_sale" },
       { label: "Appointment", value: "mindbody_appointment" },
+      { label: "Visit", value: "mindbody_visit" },
     ],
   },
 ] as const;
@@ -135,6 +143,7 @@ async function ensureDealSourceOptions(accessToken: string): Promise<void> {
     { label: "Contract", value: "mindbody_contract" },
     { label: "Sale", value: "mindbody_sale" },
     { label: "Appointment", value: "mindbody_appointment" },
+    { label: "Visit", value: "mindbody_visit" },
   ];
 
   const getRes = await fetch(

@@ -22,6 +22,7 @@ import {
   shouldAssociateDealToContact,
 } from "@/lib/sync/runtime-rules";
 import { normalizeAppointmentPayload } from "@/lib/sync/appointments";
+import { normalizeVisitPayload } from "@/lib/sync/visits";
 
 async function queuePendingDealContactAssociation(
   tenantId: string,
@@ -337,6 +338,95 @@ export async function syncAppointmentToHubspotDeal(
         dealId,
         clientId,
         "Contact was missing when appointment sync ran"
+      );
+    }
+  }
+
+  return { dealId };
+}
+
+export async function syncVisitToHubspotDeal(
+  tenantId: string,
+  hubspotAccount: HubspotAccount,
+  settings: SyncSettings,
+  payload: Record<string, unknown>
+): Promise<{ dealId: string }> {
+  if (!settings.visits_enabled) {
+    throw new Error("Visit sync is disabled");
+  }
+  if (!settings.deals_enabled) {
+    throw new Error("Deal sync is disabled");
+  }
+  if (!allowsSync(settings.deals_direction, "mindbody", "hubspot")) {
+    throw new Error("Deal sync direction does not allow Mindbody → HubSpot");
+  }
+
+  const clientIdHint = String(payload.source_client_id ?? "");
+  const normalized =
+    payload.mindbody_visit_id != null
+      ? payload
+      : normalizeVisitPayload(payload, clientIdHint);
+
+  const visitId = String(normalized.mindbody_visit_id ?? "");
+  const clientId = String(normalized.source_client_id ?? clientIdHint ?? "");
+
+  if (!visitId) {
+    throw new Error("Missing visit id");
+  }
+
+  const accessToken = await getValidAccessToken(hubspotAccount);
+  let dealId = await searchDealByMindbodyId(
+    accessToken,
+    "mindbody_visit_id",
+    visitId
+  );
+
+  const contactId =
+    shouldAssociateDealToContact(settings) && clientId
+      ? await searchContactByMindbodyId(accessToken, clientId)
+      : null;
+
+  const mappings = await getFieldMappings(tenantId, "deal");
+  const dealProps = {
+    ...applyDealMappings(mappings, normalized, "visit"),
+    deal_source: "mindbody_visit",
+    mindbody_visit_id: visitId,
+    mindbody_client_id: clientId || undefined,
+    dealname: String(normalized.deal_name ?? "") || `Visit ${visitId}`,
+  };
+
+  if (dealId) {
+    await updateDeal(accessToken, dealId, dealProps);
+    if (contactId && shouldAssociateDealToContact(settings)) {
+      await associateDealToContact(accessToken, dealId, contactId);
+    }
+  } else {
+    dealId = await createDeal(accessToken, dealProps, contactId ?? undefined);
+  }
+
+  await getSupabase().from("entity_mappings").upsert(
+    {
+      tenant_id: tenantId,
+      entity_type: "deal",
+      hubspot_id: dealId,
+      mindbody_id: visitId,
+      deal_source: "mindbody_visit",
+      last_source: "mindbody",
+      last_synced_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "tenant_id,entity_type,hubspot_id" }
+  );
+
+  if (shouldAssociateDealToContact(settings)) {
+    if (contactId) {
+      await clearPendingDealContactAssociation(tenantId, dealId, clientId);
+    } else if (clientId) {
+      await queuePendingDealContactAssociation(
+        tenantId,
+        dealId,
+        clientId,
+        "Contact was missing when visit sync ran"
       );
     }
   }

@@ -2,6 +2,7 @@ import { getHubspotAccountByTenant } from "@/lib/hubspot/tokens";
 import {
   fetchClientContracts,
   getMindbodyAccountByTenant,
+  listMindbodyClientVisits,
   listMindbodyClients,
   listMindbodySales,
   listMindbodyStaffAppointments,
@@ -13,8 +14,10 @@ import {
   syncAppointmentToHubspotDeal,
   syncContractToHubspotDeal,
   syncSaleToHubspotDeal,
+  syncVisitToHubspotDeal,
 } from "@/lib/sync/deals";
 import { normalizeAppointmentPayload } from "@/lib/sync/appointments";
+import { normalizeVisitPayload } from "@/lib/sync/visits";
 import { ensureHubspotPropertiesForTenant } from "@/lib/sync/ensure-hubspot-properties";
 import {
   completeSyncRun,
@@ -29,7 +32,8 @@ export const TEST_SYNC_RECORD_LIMIT = 20;
 type DealTestItem =
   | { kind: "sale"; payload: Record<string, unknown> }
   | { kind: "contract"; payload: Record<string, unknown> }
-  | { kind: "appointment"; payload: Record<string, unknown> };
+  | { kind: "appointment"; payload: Record<string, unknown> }
+  | { kind: "visit"; payload: Record<string, unknown> };
 
 async function getSyncSettings(tenantId: string): Promise<SyncSettings> {
   const { data, error } = await getSupabase()
@@ -148,6 +152,63 @@ async function loadTestDealItems(
       items.push({ kind: "appointment", payload });
       if (items.length >= limit) break;
     }
+  }
+
+  if (settings.visits_enabled && items.length < limit) {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - 30);
+    const startDate = start.toISOString().slice(0, 10);
+    const endDate = end.toISOString().slice(0, 10);
+    const remaining = limit - items.length;
+    // Visits are per-client; sample enough clients to fill remaining slots.
+    const clientSample = Math.min(Math.max(remaining * 2, 5), 20);
+
+    log.step("listMindbodyClientVisits.start", {
+      startDate,
+      endDate,
+      remaining,
+      clientSample,
+    });
+
+    const clients = await listMindbodyClients(mindbodyAccount, 0, clientSample);
+    let visitCount = 0;
+
+    for (const client of clients) {
+      if (items.length >= limit) break;
+      const clientId = client.Id;
+      if (!clientId) continue;
+
+      let visits: Record<string, unknown>[] = [];
+      try {
+        visits = await listMindbodyClientVisits(mindbodyAccount, {
+          clientId,
+          startDate,
+          endDate,
+          offset: 0,
+          limit: remaining,
+        });
+      } catch (e) {
+        log.step("listMindbodyClientVisits.clientFailed", {
+          clientId,
+          error: e instanceof Error ? e.message : String(e),
+        });
+        continue;
+      }
+
+      for (const row of visits) {
+        const payload = normalizeVisitPayload(row, clientId);
+        if (!payload.mindbody_visit_id) continue;
+        items.push({ kind: "visit", payload });
+        visitCount++;
+        if (items.length >= limit) break;
+      }
+    }
+
+    log.step("listMindbodyClientVisits.done", {
+      clientsChecked: clients.length,
+      returned: visitCount,
+    });
   }
 
   log.step("loadTestDealItems.done", { total: items.length });
@@ -278,7 +339,7 @@ export async function runTestSync(
       if (dealItems.length === 0) {
         await log.record("loadTestDealItems", "skipped", {
           message:
-            "No sales, contracts, or appointments found in Mindbody for test sync",
+            "No sales, contracts, appointments, or visits found in Mindbody for test sync",
         });
       }
 
@@ -288,7 +349,9 @@ export async function runTestSync(
             ? item.payload.saleId
             : item.kind === "contract"
               ? item.payload.clientContractId
-              : item.payload.mindbody_appointment_id
+              : item.kind === "appointment"
+                ? item.payload.mindbody_appointment_id
+                : item.payload.mindbody_visit_id
         );
 
         log.step(`syncDeal.${item.kind}.start`, { externalId, payload: item.payload });
@@ -310,12 +373,19 @@ export async function runTestSync(
                     settings,
                     item.payload
                   )
-                : await syncAppointmentToHubspotDeal(
-                    tenantId,
-                    hubspotAccount,
-                    settings,
-                    item.payload
-                  );
+                : item.kind === "appointment"
+                  ? await syncAppointmentToHubspotDeal(
+                      tenantId,
+                      hubspotAccount,
+                      settings,
+                      item.payload
+                    )
+                  : await syncVisitToHubspotDeal(
+                      tenantId,
+                      hubspotAccount,
+                      settings,
+                      item.payload
+                    );
 
           processed++;
           await log.record(`syncDeal.${item.kind}`, "success", {

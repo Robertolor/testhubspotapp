@@ -223,7 +223,8 @@ export async function searchDealByMindbodyId(
   propertyName:
     | "mindbody_contract_id"
     | "mindbody_sale_id"
-    | "mindbody_appointment_id",
+    | "mindbody_appointment_id"
+    | "mindbody_visit_id",
   value: string
 ): Promise<string | null> {
   const res = await hubspotFetch(accessToken, `/crm/v3/objects/deals/search`, {
