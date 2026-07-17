@@ -6,7 +6,7 @@ Use this on staging before submitting the app for review.
 
 - [ ] Create public OAuth app in [HubSpot developers](https://developers.hubspot.com/)
 - [ ] Set redirect URL: `https://<staging>/api/oauth/hubspot/callback`
-- [ ] Request scopes: `oauth`, `crm.objects.contacts.read/write`, `crm.objects.deals.read/write`, `crm.schemas.contacts.read/write`, `crm.schemas.deals.read/write`
+- [ ] Request scopes: `oauth`, contacts/deals/line_items read+write, schemas for contacts/deals/line_items read+write
 - [ ] Set `HUBSPOT_APP_ID` for webhook subscription API
 - [ ] Sign Acceptable Use Policy (Distribution tab) for non-test installs
 
