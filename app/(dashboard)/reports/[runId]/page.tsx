@@ -29,6 +29,16 @@ export default async function RunDetailPage({
     .eq("sync_run_id", runId)
     .order("created_at", { ascending: true });
 
+  const { data: hubspot } = await getSupabase()
+    .from("hubspot_accounts")
+    .select("portal_id")
+    .eq("tenant_id", session.tenantId)
+    .maybeSingle();
+
+  const portalId = hubspot?.portal_id
+    ? String(hubspot.portal_id)
+    : null;
+
   return (
     <div className="space-y-6">
       <Link href="/reports" className="text-sm text-teal-700 hover:underline">
@@ -79,6 +89,29 @@ export default async function RunDetailPage({
               {" · "}
               {ev.direction} · {ev.status}
               {ev.message ? ` — ${ev.message}` : ""}
+              {(ev.source_id || ev.target_id) && (
+                <div className="mt-1 font-mono text-xs text-slate-500">
+                  {ev.source_id ? <span>Mindbody: {ev.source_id}</span> : null}
+                  {ev.source_id && ev.target_id ? " · " : null}
+                  {ev.target_id ? (
+                    <span>
+                      HubSpot:{" "}
+                      {portalId ? (
+                        <a
+                          className="text-teal-700 underline"
+                          href={`https://app.hubspot.com/contacts/${portalId}/record/0-3/${ev.target_id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {ev.target_id}
+                        </a>
+                      ) : (
+                        ev.target_id
+                      )}
+                    </span>
+                  ) : null}
+                </div>
+              )}
             </li>
           ))}
         </ul>
