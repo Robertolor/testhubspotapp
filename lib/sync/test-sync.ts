@@ -380,6 +380,7 @@ export async function runTestSync(
           await log.record("syncContact", "success", {
             sourceId: clientId,
             targetId: result.hubspotId,
+            message: result.action,
             detail: { email: client.Email },
           });
         } catch (e) {
@@ -459,6 +460,7 @@ export async function runTestSync(
           await log.record(`syncDeal.${item.kind}`, "success", {
             sourceId: externalId,
             targetId: result.dealId,
+            message: result.action,
           });
         } catch (e) {
           failed++;

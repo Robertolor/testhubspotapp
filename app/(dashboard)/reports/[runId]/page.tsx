@@ -4,6 +4,12 @@ import { getSession } from "@/lib/auth/session";
 import { getSupabase } from "@/lib/db/client";
 import { Card, CardTitle } from "@/components/ui/card";
 
+function isWriteAction(
+  message: string | null | undefined
+): message is "created" | "updated" {
+  return message === "created" || message === "updated";
+}
+
 export default async function RunDetailPage({
   params,
 }: {
@@ -39,6 +45,10 @@ export default async function RunDetailPage({
     ? String(hubspot.portal_id)
     : null;
 
+  const writeEvents = (events ?? []).filter((ev) => isWriteAction(ev.message));
+  const createdCount = writeEvents.filter((ev) => ev.message === "created").length;
+  const updatedCount = writeEvents.filter((ev) => ev.message === "updated").length;
+
   return (
     <div className="space-y-6">
       <Link href="/reports" className="text-sm text-teal-700 hover:underline">
@@ -65,6 +75,18 @@ export default async function RunDetailPage({
             <dt className="text-slate-500">Failed</dt>
             <dd className="font-medium">{run.records_failed}</dd>
           </div>
+          {writeEvents.length > 0 ? (
+            <>
+              <div>
+                <dt className="text-slate-500">Created</dt>
+                <dd className="font-medium text-emerald-700">{createdCount}</dd>
+              </div>
+              <div>
+                <dt className="text-slate-500">Updated</dt>
+                <dd className="font-medium text-sky-700">{updatedCount}</dd>
+              </div>
+            </>
+          ) : null}
           <div>
             <dt className="text-slate-500">Started</dt>
             <dd className="font-medium">
@@ -72,6 +94,11 @@ export default async function RunDetailPage({
             </dd>
           </div>
         </dl>
+        {writeEvents.length > 0 && createdCount === 0 && updatedCount > 0 ? (
+          <p className="mt-3 text-sm text-sky-700">
+            All synced records were updates — no new HubSpot records created.
+          </p>
+        ) : null}
       </Card>
 
       <Card>
@@ -85,10 +112,29 @@ export default async function RunDetailPage({
               key={ev.id}
               className="rounded border border-slate-100 px-3 py-2"
             >
-              <span className="font-medium">{ev.entity_type}</span>
-              {" · "}
-              {ev.direction} · {ev.status}
-              {ev.message ? ` — ${ev.message}` : ""}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-medium">{ev.entity_type}</span>
+                <span className="text-slate-400">·</span>
+                <span>{ev.direction}</span>
+                <span className="text-slate-400">·</span>
+                <span>{ev.status}</span>
+                {isWriteAction(ev.message) ? (
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                      ev.message === "created"
+                        ? "bg-emerald-100 text-emerald-800"
+                        : "bg-sky-100 text-sky-800"
+                    }`}
+                  >
+                    {ev.message}
+                  </span>
+                ) : ev.message ? (
+                  <>
+                    <span className="text-slate-400">—</span>
+                    <span className="text-slate-600">{ev.message}</span>
+                  </>
+                ) : null}
+              </div>
               {(ev.source_id || ev.target_id) && (
                 <div className="mt-1 font-mono text-xs text-slate-500">
                   {ev.source_id ? <span>Mindbody: {ev.source_id}</span> : null}

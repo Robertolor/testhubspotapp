@@ -35,7 +35,7 @@ export async function syncContactMindbodyToHubspot(
   settings: SyncSettings,
   clientId: string,
   runId: string
-): Promise<{ hubspotId: string }> {
+): Promise<{ hubspotId: string; action: "created" | "updated" }> {
   if (!settings.contacts_enabled) {
     throw new Error("Contact sync is disabled");
   }
@@ -66,12 +66,16 @@ export async function syncContactMindbodyToHubspot(
   props.email = email;
 
   const accessToken = await getValidAccessToken(hubspotAccount);
-  let hubspotId = await searchContactByMindbodyId(accessToken, client.Id);
+  const existingHubspotId = await searchContactByMindbodyId(accessToken, client.Id);
+  let hubspotId = existingHubspotId;
+  let action: "created" | "updated";
 
   if (hubspotId) {
     await updateContact(accessToken, hubspotId, props);
+    action = "updated";
   } else {
     hubspotId = await upsertContact(accessToken, props, email);
+    action = "created";
   }
 
   await upsertEntityMapping(
@@ -89,7 +93,7 @@ export async function syncContactMindbodyToHubspot(
     accessToken
   );
 
-  return { hubspotId };
+  return { hubspotId, action };
 }
 
 export async function syncContactHubspotToMindbody(

@@ -25,6 +25,13 @@ import { normalizeAppointmentPayload } from "@/lib/sync/appointments";
 import { resolveDealPipelineProperties } from "@/lib/sync/deal-pipeline";
 import { normalizeVisitPayload } from "@/lib/sync/visits";
 
+export type SyncWriteAction = "created" | "updated";
+
+export type SyncDealResult = {
+  dealId: string;
+  action: SyncWriteAction;
+};
+
 async function queuePendingDealContactAssociation(
   tenantId: string,
   dealId: string,
@@ -64,7 +71,7 @@ export async function syncContractToHubspotDeal(
   _mindbodyAccount: MindbodyAccount,
   settings: SyncSettings,
   payload: Record<string, unknown>
-): Promise<{ dealId: string }> {
+): Promise<SyncDealResult> {
   if (!settings.deals_enabled) {
     throw new Error("Deal sync is disabled");
   }
@@ -124,13 +131,16 @@ export async function syncContractToHubspotDeal(
       : undefined,
   };
 
+  let action: SyncWriteAction;
   if (dealId) {
     await updateDeal(accessToken, dealId, dealProps);
     if (contactId && shouldAssociateDealToContact(settings)) {
       await associateDealToContact(accessToken, dealId, contactId);
     }
+    action = "updated";
   } else {
     dealId = await createDeal(accessToken, dealProps, contactId ?? undefined);
+    action = "created";
   }
 
   await getSupabase().from("entity_mappings").upsert(
@@ -160,7 +170,7 @@ export async function syncContractToHubspotDeal(
     }
   }
 
-  return { dealId };
+  return { dealId, action };
 }
 
 export async function syncSaleToHubspotDeal(
@@ -168,7 +178,7 @@ export async function syncSaleToHubspotDeal(
   hubspotAccount: HubspotAccount,
   settings: SyncSettings,
   payload: Record<string, unknown>
-): Promise<{ dealId: string }> {
+): Promise<SyncDealResult> {
   if (!settings.deals_enabled) {
     throw new Error("Deal sync is disabled");
   }
@@ -231,13 +241,16 @@ export async function syncSaleToHubspotDeal(
     amount: amount !== undefined ? String(amount) : undefined,
   };
 
+  let action: SyncWriteAction;
   if (dealId) {
     await updateDeal(accessToken, dealId, dealProps);
     if (contactId && shouldAssociateDealToContact(settings)) {
       await associateDealToContact(accessToken, dealId, contactId);
     }
+    action = "updated";
   } else {
     dealId = await createDeal(accessToken, dealProps, contactId ?? undefined);
+    action = "created";
   }
 
   await getSupabase().from("entity_mappings").upsert(
@@ -267,7 +280,7 @@ export async function syncSaleToHubspotDeal(
     }
   }
 
-  return { dealId };
+  return { dealId, action };
 }
 
 export async function syncAppointmentToHubspotDeal(
@@ -275,7 +288,7 @@ export async function syncAppointmentToHubspotDeal(
   hubspotAccount: HubspotAccount,
   settings: SyncSettings,
   payload: Record<string, unknown>
-): Promise<{ dealId: string }> {
+): Promise<SyncDealResult> {
   if (!settings.appointments_enabled) {
     throw new Error("Appointment sync is disabled");
   }
@@ -332,13 +345,16 @@ export async function syncAppointmentToHubspotDeal(
       String(normalized.deal_name ?? "") || `Appointment ${appointmentId}`,
   };
 
+  let action: SyncWriteAction;
   if (dealId) {
     await updateDeal(accessToken, dealId, dealProps);
     if (contactId && shouldAssociateDealToContact(settings)) {
       await associateDealToContact(accessToken, dealId, contactId);
     }
+    action = "updated";
   } else {
     dealId = await createDeal(accessToken, dealProps, contactId ?? undefined);
+    action = "created";
   }
 
   await getSupabase().from("entity_mappings").upsert(
@@ -368,7 +384,7 @@ export async function syncAppointmentToHubspotDeal(
     }
   }
 
-  return { dealId };
+  return { dealId, action };
 }
 
 export async function syncVisitToHubspotDeal(
@@ -376,7 +392,7 @@ export async function syncVisitToHubspotDeal(
   hubspotAccount: HubspotAccount,
   settings: SyncSettings,
   payload: Record<string, unknown>
-): Promise<{ dealId: string }> {
+): Promise<SyncDealResult> {
   if (!settings.visits_enabled) {
     throw new Error("Visit sync is disabled");
   }
@@ -429,13 +445,16 @@ export async function syncVisitToHubspotDeal(
     dealname: String(normalized.deal_name ?? "") || `Visit ${visitId}`,
   };
 
+  let action: SyncWriteAction;
   if (dealId) {
     await updateDeal(accessToken, dealId, dealProps);
     if (contactId && shouldAssociateDealToContact(settings)) {
       await associateDealToContact(accessToken, dealId, contactId);
     }
+    action = "updated";
   } else {
     dealId = await createDeal(accessToken, dealProps, contactId ?? undefined);
+    action = "created";
   }
 
   await getSupabase().from("entity_mappings").upsert(
@@ -465,5 +484,5 @@ export async function syncVisitToHubspotDeal(
     }
   }
 
-  return { dealId };
+  return { dealId, action };
 }
