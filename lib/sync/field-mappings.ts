@@ -194,36 +194,55 @@ export const DEFAULT_LINE_ITEM_MAPPINGS: DefaultFieldMapping[] = [
   },
 ];
 
+async function insertMissingDefaultMappings(
+  tenantId: string,
+  defaults: DefaultFieldMapping[]
+): Promise<void> {
+  if (defaults.length === 0) return;
+
+  const entityTypes = [...new Set(defaults.map((d) => d.entity_type))];
+  const { data: existing, error: selectError } = await getSupabase()
+    .from("field_mappings")
+    .select("entity_type, hubspot_property, mindbody_source")
+    .eq("tenant_id", tenantId)
+    .in("entity_type", entityTypes);
+
+  if (selectError) throw selectError;
+
+  const existingKeys = new Set(
+    (existing ?? []).map(
+      (row) =>
+        `${row.entity_type}|${row.hubspot_property}|${row.mindbody_source ?? ""}`
+    )
+  );
+
+  const missing = defaults.filter((mapping) => {
+    const key = `${mapping.entity_type}|${mapping.hubspot_property}|${mapping.mindbody_source ?? ""}`;
+    return !existingKeys.has(key);
+  });
+
+  if (missing.length === 0) return;
+
+  const { error: insertError } = await getSupabase()
+    .from("field_mappings")
+    .insert(missing.map((mapping) => ({ ...mapping, tenant_id: tenantId })));
+
+  if (insertError) throw insertError;
+}
+
 export async function seedDefaultFieldMappings(tenantId: string): Promise<void> {
-  const rows = [
+  await insertMissingDefaultMappings(tenantId, [
     ...DEFAULT_CONTACT_MAPPINGS,
     ...DEFAULT_DEAL_MAPPINGS,
     ...DEFAULT_LINE_ITEM_MAPPINGS,
-  ].map((m) => ({ ...m, tenant_id: tenantId }));
-
-  for (const row of rows) {
-    await getSupabase().from("field_mappings").upsert(row, {
-      onConflict: "tenant_id,entity_type,hubspot_property",
-      ignoreDuplicates: true,
-    });
-  }
+  ]);
 }
 
 /** Idempotent: inserts missing suggested line-item rows without overwriting remaps. */
 export async function ensureDefaultLineItemMappings(
   tenantId: string
 ): Promise<void> {
-  for (const mapping of DEFAULT_LINE_ITEM_MAPPINGS) {
-    await getSupabase()
-      .from("field_mappings")
-      .upsert(
-        { ...mapping, tenant_id: tenantId },
-        {
-          onConflict: "tenant_id,entity_type,hubspot_property",
-          ignoreDuplicates: true,
-        }
-      );
-  }
+  await insertMissingDefaultMappings(tenantId, DEFAULT_LINE_ITEM_MAPPINGS);
 }
 
 export async function getFieldMappings(
