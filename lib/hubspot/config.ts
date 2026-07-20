@@ -12,8 +12,8 @@ export const HUBSPOT_SCOPES = [
   "crm.schemas.contacts.write",
   "crm.schemas.deals.read",
   "crm.schemas.deals.write",
+  // HubSpot has no crm.schemas.line_items.write — only read is valid
   "crm.schemas.line_items.read",
-  "crm.schemas.line_items.write",
 ].join(" ");
 
 export const HUBSPOT_WEBHOOK_EVENTS = [
