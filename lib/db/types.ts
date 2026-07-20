@@ -57,6 +57,8 @@ export interface SyncSettings {
   assoc_deal_to_contact: boolean;
   assoc_line_item_to_deal: boolean;
   assoc_purchase_to_contract: boolean;
+  /** HubSpot deal pipeline ID for synced deals. null = HubSpot default behavior. */
+  deals_pipeline_id: string | null;
 }
 
 export type MindbodyMappingSource =

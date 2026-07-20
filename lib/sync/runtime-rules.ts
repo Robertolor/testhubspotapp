@@ -94,5 +94,9 @@ export function normalizeSyncSettings(
     assoc_deal_to_contact: row.assoc_deal_to_contact !== false,
     assoc_line_item_to_deal: Boolean(row.assoc_line_item_to_deal ?? false),
     assoc_purchase_to_contract: Boolean(row.assoc_purchase_to_contract ?? false),
+    deals_pipeline_id:
+      row.deals_pipeline_id != null && String(row.deals_pipeline_id).trim()
+        ? String(row.deals_pipeline_id).trim()
+        : null,
   };
 }

@@ -28,6 +28,7 @@ interface SettingsData {
     assoc_deal_to_contact?: boolean;
     assoc_line_item_to_deal?: boolean;
     assoc_purchase_to_contract?: boolean;
+    deals_pipeline_id?: string | null;
   };
   mindbody?: {
     siteId?: number;
@@ -37,6 +38,12 @@ interface SettingsData {
     staffPasswordConfigured?: boolean;
   };
   hubspot?: { portalId: number; hubDomain: string | null };
+}
+
+interface HubspotPipelineOption {
+  id: string;
+  label: string;
+  stages: { id: string; label: string }[];
 }
 
 function isErrorMessage(text: string): boolean {
@@ -67,6 +74,12 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
   const [assocDealToContact, setAssocDealToContact] = useState(true);
   const [assocLineItemToDeal, setAssocLineItemToDeal] = useState(false);
   const [assocPurchaseToContract, setAssocPurchaseToContract] = useState(false);
+  const [dealsPipelineId, setDealsPipelineId] = useState("");
+  const [pipelineOptions, setPipelineOptions] = useState<HubspotPipelineOption[]>(
+    []
+  );
+  const [pipelinesLoading, setPipelinesLoading] = useState(false);
+  const [pipelinesError, setPipelinesError] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [saveSucceeded, setSaveSucceeded] = useState(false);
   const [mindbodyFeedback, setMindbodyFeedback] = useState<string | null>(null);
@@ -98,11 +111,53 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
           setAssocPurchaseToContract(
             d.settings.assoc_purchase_to_contract ?? false
           );
+          setDealsPipelineId(d.settings.deals_pipeline_id ?? "");
         }
         if (d.mindbody?.siteId) setSiteId(String(d.mindbody.siteId));
         if (d.mindbody?.staffUsername) setStaffUsername(d.mindbody.staffUsername);
       });
   }, [tenantId]);
+
+  useEffect(() => {
+    if (!data?.hubspot) {
+      setPipelineOptions([]);
+      setPipelinesError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setPipelinesLoading(true);
+    setPipelinesError(null);
+
+    fetch(`/api/tenants/${tenantId}/hubspot/pipelines`)
+      .then(async (res) => {
+        const json = (await res.json()) as {
+          pipelines?: HubspotPipelineOption[];
+          error?: string;
+        };
+        if (!res.ok) {
+          throw new Error(json.error ?? "Failed to load HubSpot pipelines");
+        }
+        if (!cancelled) {
+          setPipelineOptions(json.pipelines ?? []);
+        }
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setPipelineOptions([]);
+          setPipelinesError(
+            e instanceof Error ? e.message : "Failed to load HubSpot pipelines"
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setPipelinesLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId, data?.hubspot]);
 
   useEffect(() => {
     if (!saveSucceeded) return;
@@ -172,6 +227,7 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
             assocDealToContact,
             assocLineItemToDeal,
             assocPurchaseToContract,
+            dealsPipelineId: dealsPipelineId.trim() || null,
           },
         }),
       });
@@ -425,6 +481,51 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
             direction={dealsDirection}
             onDirectionChange={setDealsDirection}
           />
+
+          <label className="block text-sm">
+            <span className="font-medium text-slate-700">Default deal pipeline</span>
+            <select
+              value={dealsPipelineId}
+              onChange={(e) => setDealsPipelineId(e.target.value)}
+              disabled={!data?.hubspot || pipelinesLoading}
+              className="mt-1 w-full max-w-md rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 disabled:bg-slate-100"
+            >
+              <option value="">
+                {data?.hubspot
+                  ? "HubSpot default (no pipeline set)"
+                  : "Connect HubSpot to choose a pipeline"}
+              </option>
+              {pipelineOptions.map((pipeline) => (
+                <option key={pipeline.id} value={pipeline.id}>
+                  {pipeline.label}
+                </option>
+              ))}
+            </select>
+            <span className="mt-1 block text-xs text-slate-500">
+              Synced deals land in this pipeline with a stage from Mindbody
+              status (e.g. Attended, Scheduled, Active). Gritcity uses a
+              dedicated pipeline with matching stage labels.
+            </span>
+            {pipelinesLoading ? (
+              <span className="mt-1 block text-xs text-slate-500">
+                Loading HubSpot pipelines…
+              </span>
+            ) : null}
+            {pipelinesError ? (
+              <span className="mt-1 block text-xs text-red-600">
+                {pipelinesError}
+              </span>
+            ) : null}
+            {dealsPipelineId && pipelineOptions.length > 0 ? (
+              <span className="mt-1 block text-xs text-slate-500">
+                Stages in this pipeline:{" "}
+                {pipelineOptions
+                  .find((pipeline) => pipeline.id === dealsPipelineId)
+                  ?.stages.map((stage) => stage.label)
+                  .join(", ") || "none"}
+              </span>
+            ) : null}
+          </label>
         </div>
       </Card>
 

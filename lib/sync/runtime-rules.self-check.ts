@@ -21,6 +21,7 @@ function baseSettings(overrides: Partial<SyncSettings> = {}): SyncSettings {
     assoc_deal_to_contact: true,
     assoc_line_item_to_deal: false,
     assoc_purchase_to_contract: false,
+    deals_pipeline_id: null,
     ...overrides,
   };
 }

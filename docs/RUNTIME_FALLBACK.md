@@ -20,6 +20,7 @@ Per-tenant toggles in **Settings → Runtime sync controls**:
 | Min purchase amount | empty (no filter) | Skips sale/purchase deals at or below threshold |
 | Appointments / Visits / Line items | off | Appointments + visits: sync via test/deal path when on. Line items: map-only until sync ships |
 | Link deals to contacts | on | Matches current `createDeal` association behavior |
+| Default deal pipeline | empty | When set, synced deals get pipeline + stage from Mindbody status |
 | Link line items to deals | off | No-op until line item sync ships |
 | Link purchases to contracts | off | No-op until purchase↔contract association ships |
 

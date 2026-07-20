@@ -104,6 +104,7 @@ export async function PUT(
       assocDealToContact?: boolean;
       assocLineItemToDeal?: boolean;
       assocPurchaseToContract?: boolean;
+      dealsPipelineId?: string | null;
     };
     fieldMappings?: {
       entityType: string;
@@ -151,6 +152,10 @@ export async function PUT(
     }
     if (body.sync.assocPurchaseToContract !== undefined) {
       syncUpdate.assoc_purchase_to_contract = body.sync.assocPurchaseToContract;
+    }
+    if (body.sync.dealsPipelineId !== undefined) {
+      const pipelineId = body.sync.dealsPipelineId?.trim();
+      syncUpdate.deals_pipeline_id = pipelineId ? pipelineId : null;
     }
 
     await supabase

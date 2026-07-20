@@ -22,6 +22,7 @@ import {
   shouldAssociateDealToContact,
 } from "@/lib/sync/runtime-rules";
 import { normalizeAppointmentPayload } from "@/lib/sync/appointments";
+import { resolveDealPipelineProperties } from "@/lib/sync/deal-pipeline";
 import { normalizeVisitPayload } from "@/lib/sync/visits";
 
 async function queuePendingDealContactAssociation(
@@ -106,9 +107,16 @@ export async function syncContractToHubspotDeal(
 
   const dealProps = {
     ...applyDealMappings(mappings, normalizedPayload, "contract"),
+    ...(await resolveDealPipelineProperties(
+      accessToken,
+      settings,
+      "contract",
+      normalizedPayload
+    )),
     deal_source: "mindbody_contract",
     mindbody_contract_id: clientContractId,
     mindbody_client_id: clientUniqueId,
+    dealname: contractName,
     closedate: payload.contractStartDateTime
       ? String(payload.contractStartDateTime).split("T")[0]
       : undefined,
@@ -207,6 +215,12 @@ export async function syncSaleToHubspotDeal(
 
   const dealProps = {
     ...applyDealMappings(mappings, normalizedPayload, "sale"),
+    ...(await resolveDealPipelineProperties(
+      accessToken,
+      settings,
+      "sale",
+      normalizedPayload
+    )),
     deal_source: "mindbody_sale",
     mindbody_sale_id: saleId,
     mindbody_client_id: clientId,
@@ -299,6 +313,12 @@ export async function syncAppointmentToHubspotDeal(
   const mappings = await getFieldMappings(tenantId, "deal");
   const dealProps = {
     ...applyDealMappings(mappings, normalized, "appointment"),
+    ...(await resolveDealPipelineProperties(
+      accessToken,
+      settings,
+      "appointment",
+      normalized
+    )),
     deal_source: "mindbody_appointment",
     mindbody_appointment_id: appointmentId,
     mindbody_client_id: clientId || undefined,
@@ -389,6 +409,12 @@ export async function syncVisitToHubspotDeal(
   const mappings = await getFieldMappings(tenantId, "deal");
   const dealProps = {
     ...applyDealMappings(mappings, normalized, "visit"),
+    ...(await resolveDealPipelineProperties(
+      accessToken,
+      settings,
+      "visit",
+      normalized
+    )),
     deal_source: "mindbody_visit",
     mindbody_visit_id: visitId,
     mindbody_client_id: clientId || undefined,
