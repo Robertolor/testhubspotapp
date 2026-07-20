@@ -561,7 +561,7 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
             </p>
             <p className="mt-1 text-xs text-slate-500">
               Appointments and visits sync via Test sync deals when enabled.
-              Line items still map-only until sync ships.
+              Line items sync on qualifying sales when enabled.
             </p>
             <div className="mt-3 space-y-2">
               <ToggleRow
@@ -600,7 +600,7 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
                 disabled={!lineItemsEnabled}
                 hint={
                   !lineItemsEnabled
-                    ? "Enable line items when sync is available"
+                    ? "Enable line items in Runtime sync controls"
                     : undefined
                 }
               />

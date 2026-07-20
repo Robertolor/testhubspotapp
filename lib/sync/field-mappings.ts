@@ -152,6 +152,14 @@ export function applyDealMappings(
   return mapMindbodyFieldsToHubspot(scoped, payload);
 }
 
+export function applyLineItemMappings(
+  mappings: FieldMapping[],
+  payload: Record<string, unknown>
+): Record<string, string> {
+  const scoped = mappings.filter((mapping) => mapping.entity_type === "line_item");
+  return mapMindbodyFieldsToHubspot(scoped, payload);
+}
+
 export function applyContactMappings(
   mappings: FieldMapping[],
   mindbody: Record<string, unknown>,

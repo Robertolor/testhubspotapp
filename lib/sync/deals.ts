@@ -24,12 +24,17 @@ import {
 import { normalizeAppointmentPayload } from "@/lib/sync/appointments";
 import { resolveDealPipelineProperties } from "@/lib/sync/deal-pipeline";
 import { normalizeVisitPayload } from "@/lib/sync/visits";
+import {
+  syncLineItemsForSale,
+  type SyncLineItemResult,
+} from "@/lib/sync/line-items-sync";
 
 export type SyncWriteAction = "created" | "updated";
 
 export type SyncDealResult = {
   dealId: string;
   action: SyncWriteAction;
+  lineItems?: SyncLineItemResult[];
 };
 
 async function queuePendingDealContactAssociation(
@@ -177,7 +182,8 @@ export async function syncSaleToHubspotDeal(
   tenantId: string,
   hubspotAccount: HubspotAccount,
   settings: SyncSettings,
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
+  mindbodyAccount?: MindbodyAccount
 ): Promise<SyncDealResult> {
   if (!settings.deals_enabled) {
     throw new Error("Deal sync is disabled");
@@ -280,7 +286,20 @@ export async function syncSaleToHubspotDeal(
     }
   }
 
-  return { dealId, action };
+  let lineItems: SyncLineItemResult[] | undefined;
+  if (settings.line_items_enabled && mindbodyAccount && clientId) {
+    lineItems = await syncLineItemsForSale(
+      tenantId,
+      hubspotAccount,
+      mindbodyAccount,
+      settings,
+      saleId,
+      clientId,
+      dealId
+    );
+  }
+
+  return { dealId, action, lineItems };
 }
 
 export async function syncAppointmentToHubspotDeal(

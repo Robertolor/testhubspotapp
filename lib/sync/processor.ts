@@ -258,7 +258,8 @@ async function processMindbodyEvent(
       tenantId,
       hubspotAccount,
       settings,
-      data
+      data,
+      mindbodyAccount
     );
     await logSyncEvent(
       runId,
@@ -266,10 +267,22 @@ async function processMindbodyEvent(
       "deal",
       "mb_to_hs",
       "success",
-      undefined,
+      result.action,
       String(data.saleId ?? ""),
       result.dealId
     );
+    for (const lineItem of result.lineItems ?? []) {
+      await logSyncEvent(
+        runId,
+        tenantId,
+        "line_item",
+        "mb_to_hs",
+        "success",
+        lineItem.action,
+        lineItem.lineItemKey,
+        lineItem.hubspotId
+      );
+    }
   }
 }
 

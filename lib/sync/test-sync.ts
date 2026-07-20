@@ -432,7 +432,8 @@ export async function runTestSync(
                   tenantId,
                   hubspotAccount,
                   settings,
-                  item.payload
+                  item.payload,
+                  mindbodyAccount
                 )
               : item.kind === "contract"
                 ? await syncContractToHubspotDeal(
@@ -462,6 +463,17 @@ export async function runTestSync(
             targetId: result.dealId,
             message: result.action,
           });
+
+          if (result.lineItems?.length) {
+            for (const lineItem of result.lineItems) {
+              processed++;
+              await log.record("syncLineItem", "success", {
+                sourceId: lineItem.lineItemKey,
+                targetId: lineItem.hubspotId,
+                message: lineItem.action,
+              });
+            }
+          }
         } catch (e) {
           failed++;
           await log.fail(`syncDeal.${item.kind}`, e, externalId);

@@ -49,6 +49,12 @@ export default async function RunDetailPage({
   const createdCount = writeEvents.filter((ev) => ev.message === "created").length;
   const updatedCount = writeEvents.filter((ev) => ev.message === "updated").length;
 
+  function hubspotRecordPath(entityType: string): string {
+    if (entityType === "line_item") return "0-8";
+    if (entityType === "deal") return "0-3";
+    return "0-1";
+  }
+
   return (
     <div className="space-y-6">
       <Link href="/reports" className="text-sm text-teal-700 hover:underline">
@@ -145,7 +151,7 @@ export default async function RunDetailPage({
                       {portalId ? (
                         <a
                           className="text-teal-700 underline"
-                          href={`https://app.hubspot.com/contacts/${portalId}/record/0-3/${ev.target_id}`}
+                          href={`https://app.hubspot.com/contacts/${portalId}/record/${hubspotRecordPath(ev.entity_type)}/${ev.target_id}`}
                           target="_blank"
                           rel="noreferrer"
                         >

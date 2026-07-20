@@ -332,3 +332,42 @@ export async function listMindbodyClientVisits(
   };
   return data.Visits ?? data.ClientVisits ?? [];
 }
+
+export interface ListClientPurchasesOptions {
+  clientId: string;
+  startDate: string;
+  endDate: string;
+  offset?: number;
+  limit?: number;
+}
+
+/** Pull purchases for one client in a date window (includes PurchasedItems on Sale). */
+export async function listMindbodyClientPurchases(
+  account: MindbodyAccount,
+  options: ListClientPurchasesOptions
+): Promise<Record<string, unknown>[]> {
+  const limit = options.limit ?? 100;
+  const offset = options.offset ?? 0;
+  const res = await mindbodyRequestForAccount(
+    account,
+    "GET",
+    "/client/clientpurchases",
+    {
+      "request.clientId": options.clientId,
+      "request.startDate": options.startDate,
+      "request.endDate": options.endDate,
+      "request.limit": String(limit),
+      "request.offset": String(offset),
+    }
+  );
+  if (!res.ok) {
+    throw new Error(
+      `Mindbody list client purchases failed: ${await res.text()}`
+    );
+  }
+  const data = (await res.json()) as {
+    Purchases?: Record<string, unknown>[];
+    ClientPurchases?: Record<string, unknown>[];
+  };
+  return data.Purchases ?? data.ClientPurchases ?? [];
+}

@@ -73,9 +73,84 @@ const DEAL_PROPERTIES = [
   },
 ] as const;
 
+const LINE_ITEM_PROPERTIES = [
+  {
+    name: "mindbody_line_item_key",
+    label: "Mindbody Line Item Key",
+    type: "string",
+    fieldType: "text",
+    groupName: "mindbody_sync",
+  },
+  {
+    name: "mindbody_sale_id",
+    label: "Mindbody Sale ID",
+    type: "string",
+    fieldType: "text",
+    groupName: "mindbody_sync",
+  },
+  {
+    name: "mindbody_sale_detail_id",
+    label: "Mindbody Sale Detail ID",
+    type: "string",
+    fieldType: "text",
+    groupName: "mindbody_sync",
+  },
+  {
+    name: "mindbody_item_id",
+    label: "Mindbody Item ID",
+    type: "string",
+    fieldType: "text",
+    groupName: "mindbody_sync",
+  },
+  {
+    name: "mindbody_contract_id",
+    label: "Mindbody Contract ID",
+    type: "string",
+    fieldType: "text",
+    groupName: "mindbody_sync",
+  },
+  {
+    name: "mindbody_recipient_client_id",
+    label: "Recipient Client ID",
+    type: "string",
+    fieldType: "text",
+    groupName: "mindbody_sync",
+  },
+  {
+    name: "mindbody_is_service",
+    label: "Is Service",
+    type: "bool",
+    fieldType: "booleancheckbox",
+    groupName: "mindbody_sync",
+  },
+  {
+    name: "mindbody_category_id",
+    label: "Mindbody Category ID",
+    type: "string",
+    fieldType: "text",
+    groupName: "mindbody_sync",
+  },
+  {
+    name: "mindbody_subcategory_id",
+    label: "Mindbody Subcategory ID",
+    type: "string",
+    fieldType: "text",
+    groupName: "mindbody_sync",
+  },
+  {
+    name: "mindbody_returned",
+    label: "Returned",
+    type: "bool",
+    fieldType: "booleancheckbox",
+    groupName: "mindbody_sync",
+  },
+] as const;
+
+type HubspotPropertyObject = "contacts" | "deals" | "line_items";
+
 async function ensurePropertyGroup(
   accessToken: string,
-  objectType: "contacts" | "deals"
+  objectType: HubspotPropertyObject
 ): Promise<void> {
   const res = await fetch(
     `https://api.hubapi.com/crm/v3/properties/${objectType}/groups`,
@@ -101,8 +176,11 @@ async function ensurePropertyGroup(
 
 async function ensureProperty(
   accessToken: string,
-  objectType: "contacts" | "deals",
-  prop: (typeof CONTACT_PROPERTIES)[number] | (typeof DEAL_PROPERTIES)[number]
+  objectType: HubspotPropertyObject,
+  prop:
+    | (typeof CONTACT_PROPERTIES)[number]
+    | (typeof DEAL_PROPERTIES)[number]
+    | (typeof LINE_ITEM_PROPERTIES)[number]
 ): Promise<void> {
   const res = await fetch(
     `https://api.hubapi.com/crm/v3/properties/${objectType}`,
@@ -127,12 +205,16 @@ export async function bootstrapHubspotProperties(
 ): Promise<void> {
   await ensurePropertyGroup(accessToken, "contacts");
   await ensurePropertyGroup(accessToken, "deals");
+  await ensurePropertyGroup(accessToken, "line_items");
 
   for (const prop of CONTACT_PROPERTIES) {
     await ensureProperty(accessToken, "contacts", prop);
   }
   for (const prop of DEAL_PROPERTIES) {
     await ensureProperty(accessToken, "deals", prop);
+  }
+  for (const prop of LINE_ITEM_PROPERTIES) {
+    await ensureProperty(accessToken, "line_items", prop);
   }
 
   await ensureDealSourceOptions(accessToken);
