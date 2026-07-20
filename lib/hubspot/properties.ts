@@ -73,6 +73,11 @@ const DEAL_PROPERTIES = [
   },
 ] as const;
 
+const BOOL_PROPERTY_OPTIONS = [
+  { label: "Yes", value: "true", displayOrder: 0, hidden: false },
+  { label: "No", value: "false", displayOrder: 1, hidden: false },
+] as const;
+
 const LINE_ITEM_PROPERTIES = [
   {
     name: "mindbody_line_item_key",
@@ -122,6 +127,7 @@ const LINE_ITEM_PROPERTIES = [
     type: "bool",
     fieldType: "booleancheckbox",
     groupName: "mindbody_sync",
+    options: [...BOOL_PROPERTY_OPTIONS],
   },
   {
     name: "mindbody_category_id",
@@ -143,6 +149,7 @@ const LINE_ITEM_PROPERTIES = [
     type: "bool",
     fieldType: "booleancheckbox",
     groupName: "mindbody_sync",
+    options: [...BOOL_PROPERTY_OPTIONS],
   },
 ] as const;
 
@@ -196,7 +203,10 @@ async function ensureProperty(
   if (!res.ok && res.status !== 409) {
     const text = await res.text();
     if (text.includes("already exists")) return;
-    throw new Error(`Failed to create HubSpot property ${prop.name}: ${text}`);
+    // Soft-fail: one bad custom property must not abort the whole sync run.
+    console.warn(
+      `[hubspot] Failed to create property ${objectType}.${prop.name}: ${text}`
+    );
   }
 }
 
