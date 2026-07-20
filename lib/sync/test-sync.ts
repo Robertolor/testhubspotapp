@@ -29,11 +29,54 @@ import { TestSyncLogger } from "@/lib/sync/test-logger";
 /** TEMP: sandbox E2E cap — remove or gate behind env before production */
 export const TEST_SYNC_RECORD_LIMIT = 20;
 
+const APPOINTMENT_LOOKBACK_DAYS = 30;
+/** Class visits are often older than appointments; Gritcity pulls from 2000. */
+const VISIT_LOOKBACK_DAYS = 365;
+const VISIT_CLIENT_SCAN_LIMIT = 50;
+
 type DealTestItem =
   | { kind: "sale"; payload: Record<string, unknown> }
   | { kind: "contract"; payload: Record<string, unknown> }
   | { kind: "appointment"; payload: Record<string, unknown> }
   | { kind: "visit"; payload: Record<string, unknown> };
+
+type TestDealBudget = {
+  coreMax: number;
+  appointmentMax: number;
+  visitMax: number;
+};
+
+function isoDateDaysAgo(days: number): string {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  return date.toISOString().slice(0, 10);
+}
+
+/** Reserve slots so enabled optional types are not crowded out by sales/contracts. */
+function computeTestDealBudget(
+  limit: number,
+  settings: SyncSettings
+): TestDealBudget {
+  const wantsAppointments = settings.appointments_enabled;
+  const wantsVisits = settings.visits_enabled;
+  const optionalCount = (wantsAppointments ? 1 : 0) + (wantsVisits ? 1 : 0);
+
+  if (optionalCount === 0) {
+    return { coreMax: limit, appointmentMax: 0, visitMax: 0 };
+  }
+
+  const reservedEach =
+    optionalCount === 1
+      ? Math.min(10, Math.floor(limit / 2))
+      : Math.min(6, Math.floor(limit / (optionalCount + 2)));
+
+  const optionalTotal = reservedEach * optionalCount;
+  return {
+    coreMax: Math.max(limit - optionalTotal, 0),
+    appointmentMax: wantsAppointments ? reservedEach : 0,
+    visitMax: wantsVisits ? reservedEach : 0,
+  };
+}
 
 async function getSyncSettings(tenantId: string): Promise<SyncSettings> {
   const { data, error } = await getSupabase()
@@ -83,28 +126,35 @@ async function loadTestDealItems(
   settings: SyncSettings
 ): Promise<DealTestItem[]> {
   const items: DealTestItem[] = [];
+  const budget = computeTestDealBudget(limit, settings);
 
-  log.step("loadTestDealItems.start", { limit });
+  log.step("loadTestDealItems.start", { limit, budget });
 
-  const sales = await listMindbodySales(mindbodyAccount, 0, limit);
+  const sales = await listMindbodySales(
+    mindbodyAccount,
+    0,
+    Math.min(limit, budget.coreMax)
+  );
   log.step("listMindbodySales.done", { returned: sales.length });
 
   for (const sale of sales) {
     const payload = normalizeSalePayload(sale as Record<string, unknown>);
     if (!payload.saleId) continue;
     items.push({ kind: "sale", payload });
-    if (items.length >= limit) return items;
+    if (items.length >= budget.coreMax) break;
   }
 
   log.step("loadTestDealItems.scanContracts", {
     salesFound: items.length,
-    needMore: limit - items.length,
+    coreMax: budget.coreMax,
   });
 
   const clients = await listMindbodyClients(mindbodyAccount, 0, 10);
   log.step("listMindbodyClients.forContracts", { clientCount: clients.length });
 
   for (const client of clients) {
+    if (items.length >= budget.coreMax) break;
+
     const contracts = await fetchClientContracts(mindbodyAccount, client.Id);
     log.step("fetchClientContracts", {
       clientId: client.Id,
@@ -118,29 +168,29 @@ async function loadTestDealItems(
       );
       if (!payload.clientContractId) continue;
       items.push({ kind: "contract", payload });
-      if (items.length >= limit) return items;
+      if (items.length >= budget.coreMax) break;
     }
   }
 
-  if (settings.appointments_enabled && items.length < limit) {
-    const end = new Date();
-    const start = new Date();
-    start.setDate(end.getDate() - 30);
-    const startDate = start.toISOString().slice(0, 10);
-    const endDate = end.toISOString().slice(0, 10);
-    const remaining = limit - items.length;
+  if (settings.appointments_enabled && budget.appointmentMax > 0) {
+    const startDate = isoDateDaysAgo(APPOINTMENT_LOOKBACK_DAYS);
+    const endDate = isoDateDaysAgo(0);
+    const appointmentSlots = Math.min(
+      budget.appointmentMax,
+      limit - items.length
+    );
 
     log.step("listMindbodyStaffAppointments.start", {
       startDate,
       endDate,
-      remaining,
+      appointmentSlots,
     });
 
     const appointments = await listMindbodyStaffAppointments(mindbodyAccount, {
       startDate,
       endDate,
       offset: 0,
-      limit: remaining,
+      limit: appointmentSlots,
     });
     log.step("listMindbodyStaffAppointments.done", {
       returned: appointments.length,
@@ -150,32 +200,34 @@ async function loadTestDealItems(
       const payload = normalizeAppointmentPayload(row);
       if (!payload.mindbody_appointment_id) continue;
       items.push({ kind: "appointment", payload });
-      if (items.length >= limit) break;
+      if (items.filter((item) => item.kind === "appointment").length >= appointmentSlots) {
+        break;
+      }
     }
   }
 
-  if (settings.visits_enabled && items.length < limit) {
-    const end = new Date();
-    const start = new Date();
-    start.setDate(end.getDate() - 30);
-    const startDate = start.toISOString().slice(0, 10);
-    const endDate = end.toISOString().slice(0, 10);
-    const remaining = limit - items.length;
-    // Visits are per-client; sample enough clients to fill remaining slots.
-    const clientSample = Math.min(Math.max(remaining * 2, 5), 20);
+  if (settings.visits_enabled && budget.visitMax > 0) {
+    const startDate = isoDateDaysAgo(VISIT_LOOKBACK_DAYS);
+    const endDate = isoDateDaysAgo(0);
+    const visitSlots = Math.min(budget.visitMax, limit - items.length);
 
     log.step("listMindbodyClientVisits.start", {
       startDate,
       endDate,
-      remaining,
-      clientSample,
+      visitSlots,
+      clientScanLimit: VISIT_CLIENT_SCAN_LIMIT,
     });
 
-    const clients = await listMindbodyClients(mindbodyAccount, 0, clientSample);
+    const visitClients = await listMindbodyClients(
+      mindbodyAccount,
+      0,
+      VISIT_CLIENT_SCAN_LIMIT
+    );
     let visitCount = 0;
+    let clientsWithVisits = 0;
 
-    for (const client of clients) {
-      if (items.length >= limit) break;
+    for (const client of visitClients) {
+      if (visitCount >= visitSlots) break;
       const clientId = client.Id;
       if (!clientId) continue;
 
@@ -186,7 +238,7 @@ async function loadTestDealItems(
           startDate,
           endDate,
           offset: 0,
-          limit: remaining,
+          limit: visitSlots - visitCount,
         });
       } catch (e) {
         log.step("listMindbodyClientVisits.clientFailed", {
@@ -196,22 +248,38 @@ async function loadTestDealItems(
         continue;
       }
 
+      if (visits.length > 0) {
+        clientsWithVisits++;
+        log.step("listMindbodyClientVisits.client", {
+          clientId,
+          returned: visits.length,
+        });
+      }
+
       for (const row of visits) {
         const payload = normalizeVisitPayload(row, clientId);
         if (!payload.mindbody_visit_id) continue;
         items.push({ kind: "visit", payload });
         visitCount++;
-        if (items.length >= limit) break;
+        if (visitCount >= visitSlots) break;
       }
     }
 
     log.step("listMindbodyClientVisits.done", {
-      clientsChecked: clients.length,
+      clientsChecked: visitClients.length,
+      clientsWithVisits,
       returned: visitCount,
     });
   }
 
-  log.step("loadTestDealItems.done", { total: items.length });
+  const counts = items.reduce(
+    (acc, item) => {
+      acc[item.kind] = (acc[item.kind] ?? 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
+  log.step("loadTestDealItems.done", { total: items.length, counts });
   return items;
 }
 

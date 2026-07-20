@@ -545,10 +545,11 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
         <CardTitle>Sandbox test sync (temporary)</CardTitle>
         <p className="mt-1 text-sm text-slate-600">
           Syncs at most <strong>20</strong> contacts or deals from Mindbody for
-          E2E validation. When Appointments are enabled in Runtime controls,
-          deal test sync also pulls recent staff appointments. Detailed steps
-          are logged in Reports and Vercel function logs. Use this instead of
-          full backfill on shared sandbox site{" "}
+          E2E validation. Deal test sync reserves slots for each enabled type
+          (sales/contracts, appointments, visits) so one type does not use the
+          full cap. Visits scan up to 50 clients over the past year. Detailed
+          steps are logged in Reports and Vercel function logs. Use this instead
+          of full backfill on shared sandbox site{" "}
           <code className="text-xs">-99</code>.
         </p>
         {testSyncFeedback ? (
