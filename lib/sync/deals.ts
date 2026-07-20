@@ -7,12 +7,12 @@ import type {
 import {
   associateDealToContact,
   createDeal,
-  searchDealByMindbodyId,
   updateDeal,
 } from "@/lib/hubspot/crm";
 import { getValidAccessToken } from "@/lib/hubspot/tokens";
 import { searchContactByMindbodyId } from "@/lib/hubspot/crm";
 import { allowsSync } from "@/lib/sync/direction";
+import { findExistingDealHubspotId } from "@/lib/sync/deal-lookup";
 import {
   applyDealMappings,
   getFieldMappings,
@@ -81,10 +81,12 @@ export async function syncContractToHubspotDeal(
   }
 
   const accessToken = await getValidAccessToken(hubspotAccount);
-  let dealId = await searchDealByMindbodyId(
+  let dealId = await findExistingDealHubspotId(
+    tenantId,
     accessToken,
     "mindbody_contract_id",
-    clientContractId
+    clientContractId,
+    "mindbody_contract"
   );
 
   const contactId =
@@ -182,10 +184,12 @@ export async function syncSaleToHubspotDeal(
   }
 
   const accessToken = await getValidAccessToken(hubspotAccount);
-  let dealId = await searchDealByMindbodyId(
+  let dealId = await findExistingDealHubspotId(
+    tenantId,
     accessToken,
     "mindbody_sale_id",
-    saleId
+    saleId,
+    "mindbody_sale"
   );
 
   const amount = payload.totalAmount ?? payload.paymentsTotal;
@@ -299,10 +303,12 @@ export async function syncAppointmentToHubspotDeal(
   }
 
   const accessToken = await getValidAccessToken(hubspotAccount);
-  let dealId = await searchDealByMindbodyId(
+  let dealId = await findExistingDealHubspotId(
+    tenantId,
     accessToken,
     "mindbody_appointment_id",
-    appointmentId
+    appointmentId,
+    "mindbody_appointment"
   );
 
   const contactId =
@@ -395,10 +401,12 @@ export async function syncVisitToHubspotDeal(
   }
 
   const accessToken = await getValidAccessToken(hubspotAccount);
-  let dealId = await searchDealByMindbodyId(
+  let dealId = await findExistingDealHubspotId(
+    tenantId,
     accessToken,
     "mindbody_visit_id",
-    visitId
+    visitId,
+    "mindbody_visit"
   );
 
   const contactId =

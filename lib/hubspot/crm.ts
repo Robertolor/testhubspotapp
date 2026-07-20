@@ -245,7 +245,13 @@ export async function searchDealByMindbodyId(
     }),
   });
 
-  if (!res.ok) return null;
+  if (!res.ok) {
+    const body = await res.text();
+    console.warn(
+      `[hubspot] deal search failed for ${propertyName}=${value}: ${res.status} ${body}`
+    );
+    return null;
+  }
   const data = (await res.json()) as { results: { id: string }[] };
   return data.results[0]?.id ?? null;
 }
