@@ -63,8 +63,8 @@ export async function syncLineItemToHubspot(
   );
 
   const mappings = await getFieldMappings(tenantId, "line_item");
-  const lineItemProps = {
-    ...applyLineItemMappings(mappings, payload),
+  // Baseline matches DEFAULT_LINE_ITEM_MAPPINGS; tenant remaps win via spread order.
+  const fallbackProps: Record<string, string | undefined> = {
     name: String(payload.name ?? "Line item"),
     description:
       payload.description != null ? String(payload.description) : undefined,
@@ -72,7 +72,6 @@ export async function syncLineItemToHubspot(
       payload.quantity != null ? String(payload.quantity) : undefined,
     price: payload.unit_price != null ? String(payload.unit_price) : undefined,
     amount: payload.line_total != null ? String(payload.line_total) : undefined,
-    mindbody_line_item_key: lineItemKey,
     mindbody_sale_id:
       payload.mindbody_sale_id != null
         ? String(payload.mindbody_sale_id)
@@ -95,6 +94,11 @@ export async function syncLineItemToHubspot(
         ? String(payload.subcategory_id)
         : undefined,
     mindbody_returned: boolForHubspot(payload.returned),
+  };
+  const lineItemProps = {
+    ...fallbackProps,
+    ...applyLineItemMappings(mappings, payload),
+    mindbody_line_item_key: lineItemKey,
   };
 
   let action: SyncWriteAction;

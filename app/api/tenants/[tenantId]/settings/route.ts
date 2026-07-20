@@ -12,6 +12,7 @@ import {
   testMindbodyStaffConnection,
 } from "@/lib/mindbody/tokens";
 import { ensureMindbodyWebhookSubscription } from "@/lib/mindbody/webhooks-subscribe";
+import { ensureDefaultLineItemMappings } from "@/lib/sync/field-mappings";
 
 async function assertTenantAccess(tenantId: string) {
   const session = await getSession();
@@ -47,6 +48,9 @@ export async function GET(
         .eq("tenant_id", tenantId)
         .maybeSingle(),
     ]);
+
+  // Idempotent suggested defaults; never overwrites remaps.
+  await ensureDefaultLineItemMappings(tenantId);
 
   const { data: mappings } = await supabase
     .from("field_mappings")
@@ -143,6 +147,9 @@ export async function PUT(
     }
     if (body.sync.lineItemsEnabled !== undefined) {
       syncUpdate.line_items_enabled = body.sync.lineItemsEnabled;
+      if (body.sync.lineItemsEnabled) {
+        await ensureDefaultLineItemMappings(tenantId);
+      }
     }
     if (body.sync.assocDealToContact !== undefined) {
       syncUpdate.assoc_deal_to_contact = body.sync.assocDealToContact;

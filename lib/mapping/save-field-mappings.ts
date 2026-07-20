@@ -16,6 +16,7 @@ import {
 import {
   SYSTEM_CONTACT_MAPPING_PAIRS,
   SYSTEM_CONTRACT_MAPPING_PAIRS,
+  SYSTEM_LINE_ITEM_MAPPING_PAIRS,
   SYSTEM_SALE_MAPPING_PAIRS,
   validateContactMappingSave,
   validateMappingBatch,
@@ -48,6 +49,7 @@ function systemPairsForEntity(
   mindbodySource?: MindbodyMappingSource
 ): MappingRowRef[] {
   if (entity === "contact") return SYSTEM_CONTACT_MAPPING_PAIRS;
+  if (entity === "line_item") return SYSTEM_LINE_ITEM_MAPPING_PAIRS;
   if (mindbodySource === "sale") return SYSTEM_SALE_MAPPING_PAIRS;
   if (mindbodySource === "contract") return SYSTEM_CONTRACT_MAPPING_PAIRS;
   return [...SYSTEM_SALE_MAPPING_PAIRS, ...SYSTEM_CONTRACT_MAPPING_PAIRS];
@@ -189,12 +191,10 @@ export async function saveEntityFieldMappings(
   const validation =
     entity === "contact"
       ? validateContactMappingSave(before, rows, hubspotCatalog, mindbodyCatalog)
-      : entity === "line_item"
-        ? validateMappingBatch(rows, hubspotCatalog, mindbodyCatalog)
-        : mergeValidation(
-            validateSystemMappingsPreserved(before, rows),
-            validateMappingBatch(rows, hubspotCatalog, mindbodyCatalog)
-          );
+      : mergeValidation(
+          validateSystemMappingsPreserved(before, rows),
+          validateMappingBatch(rows, hubspotCatalog, mindbodyCatalog)
+        );
 
   if (!validation.ok) {
     throw new SaveMappingsError("Invalid field mappings", validation.errors);

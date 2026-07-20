@@ -9,7 +9,7 @@ import {
   SaveMappingsError,
   saveEntityFieldMappings,
 } from "@/lib/mapping/save-field-mappings";
-import { getFieldMappings } from "@/lib/sync/field-mappings";
+import { getFieldMappings, ensureDefaultLineItemMappings } from "@/lib/sync/field-mappings";
 
 export async function GET(
   request: NextRequest,
@@ -46,6 +46,9 @@ export async function GET(
   }
 
   try {
+    if (entity === "line_item") {
+      await ensureDefaultLineItemMappings(tenantId);
+    }
     const rows = await getFieldMappings(
       tenantId,
       entity,

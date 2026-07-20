@@ -48,6 +48,15 @@ export const SYSTEM_CONTRACT_MAPPING_PAIRS: MappingRowRef[] = [
   },
 ];
 
+/** Line item identity — must stay mapped for dedupe. */
+export const SYSTEM_LINE_ITEM_MAPPING_PAIRS: MappingRowRef[] = [
+  {
+    hubspotProperty: "mindbody_line_item_key",
+    mindbodyField: "line_item_key",
+    isSystem: true,
+  },
+];
+
 /** @deprecated Use SYSTEM_SALE_MAPPING_PAIRS or SYSTEM_CONTRACT_MAPPING_PAIRS */
 export const SYSTEM_DEAL_MAPPING_PAIRS: MappingRowRef[] = [
   ...SYSTEM_SALE_MAPPING_PAIRS,

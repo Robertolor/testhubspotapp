@@ -100,16 +100,129 @@ export const DEFAULT_DEAL_MAPPINGS: DefaultFieldMapping[] = [
   },
 ];
 
+/** Suggested baseline for purchase line items — remappable except the system key. */
+export const DEFAULT_LINE_ITEM_MAPPINGS: DefaultFieldMapping[] = [
+  {
+    entity_type: "line_item",
+    hubspot_property: "name",
+    mindbody_field: "name",
+    is_custom: false,
+    is_system: false,
+    hubspot_property_type: "string",
+    mindbody_field_type: "string",
+    mindbody_source: null,
+  },
+  {
+    entity_type: "line_item",
+    hubspot_property: "description",
+    mindbody_field: "description",
+    is_custom: false,
+    is_system: false,
+    hubspot_property_type: "string",
+    mindbody_field_type: "string",
+    mindbody_source: null,
+  },
+  {
+    entity_type: "line_item",
+    hubspot_property: "quantity",
+    mindbody_field: "quantity",
+    is_custom: false,
+    is_system: false,
+    hubspot_property_type: "number",
+    mindbody_field_type: "number",
+    mindbody_source: null,
+  },
+  {
+    entity_type: "line_item",
+    hubspot_property: "price",
+    mindbody_field: "unit_price",
+    is_custom: false,
+    is_system: false,
+    hubspot_property_type: "number",
+    mindbody_field_type: "number",
+    mindbody_source: null,
+  },
+  {
+    entity_type: "line_item",
+    hubspot_property: "amount",
+    mindbody_field: "line_total",
+    is_custom: false,
+    is_system: false,
+    hubspot_property_type: "number",
+    mindbody_field_type: "number",
+    mindbody_source: null,
+  },
+  {
+    entity_type: "line_item",
+    hubspot_property: "mindbody_line_item_key",
+    mindbody_field: "line_item_key",
+    is_custom: true,
+    is_system: true,
+    hubspot_property_type: "string",
+    mindbody_field_type: "string",
+    mindbody_source: null,
+  },
+  {
+    entity_type: "line_item",
+    hubspot_property: "mindbody_sale_id",
+    mindbody_field: "mindbody_sale_id",
+    is_custom: true,
+    is_system: false,
+    hubspot_property_type: "string",
+    mindbody_field_type: "string",
+    mindbody_source: null,
+  },
+  {
+    entity_type: "line_item",
+    hubspot_property: "mindbody_sale_detail_id",
+    mindbody_field: "sale_detail_id",
+    is_custom: true,
+    is_system: false,
+    hubspot_property_type: "string",
+    mindbody_field_type: "string",
+    mindbody_source: null,
+  },
+  {
+    entity_type: "line_item",
+    hubspot_property: "mindbody_item_id",
+    mindbody_field: "item_id",
+    is_custom: true,
+    is_system: false,
+    hubspot_property_type: "string",
+    mindbody_field_type: "string",
+    mindbody_source: null,
+  },
+];
+
 export async function seedDefaultFieldMappings(tenantId: string): Promise<void> {
-  const rows = [...DEFAULT_CONTACT_MAPPINGS, ...DEFAULT_DEAL_MAPPINGS].map(
-    (m) => ({ ...m, tenant_id: tenantId })
-  );
+  const rows = [
+    ...DEFAULT_CONTACT_MAPPINGS,
+    ...DEFAULT_DEAL_MAPPINGS,
+    ...DEFAULT_LINE_ITEM_MAPPINGS,
+  ].map((m) => ({ ...m, tenant_id: tenantId }));
 
   for (const row of rows) {
     await getSupabase().from("field_mappings").upsert(row, {
       onConflict: "tenant_id,entity_type,hubspot_property",
       ignoreDuplicates: true,
     });
+  }
+}
+
+/** Idempotent: inserts missing suggested line-item rows without overwriting remaps. */
+export async function ensureDefaultLineItemMappings(
+  tenantId: string
+): Promise<void> {
+  for (const mapping of DEFAULT_LINE_ITEM_MAPPINGS) {
+    await getSupabase()
+      .from("field_mappings")
+      .upsert(
+        { ...mapping, tenant_id: tenantId },
+        {
+          onConflict: "tenant_id,entity_type,hubspot_property",
+          ignoreDuplicates: true,
+        }
+      );
   }
 }
 
