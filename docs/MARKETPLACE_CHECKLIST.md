@@ -56,10 +56,10 @@ Listing notes: see [LISTING.md](./LISTING.md)
 ## Listing pack
 
 - [x] **Build** — Privacy policy page: `/privacy`
-- [ ] **You** — Set `NEXT_PUBLIC_SUPPORT_EMAIL` in Vercel and redeploy
+- [ ] **You** — Set `NEXT_PUBLIC_SUPPORT_EMAIL=roberto@methoddata.com` in Vercel and redeploy
 - [ ] **You** — Capture screenshots (see LISTING.md)
 - [x] **Build** — Pricing model draft in LISTING.md (free/beta for 1.0)
-- [ ] **You** — Paste privacy URL, support email, copy, screenshots into HubSpot listing
+- [ ] **You** — Paste privacy URL, support email (`roberto@methoddata.com`), copy, screenshots into HubSpot listing
 
 ## After 1.0 (do not block listing)
 
