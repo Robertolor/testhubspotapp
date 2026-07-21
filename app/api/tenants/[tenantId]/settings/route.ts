@@ -11,7 +11,7 @@ import {
   storeMindbodyUserToken,
   testMindbodyStaffConnection,
 } from "@/lib/mindbody/tokens";
-import { ensureMindbodyWebhookSubscription } from "@/lib/mindbody/webhooks-subscribe";
+import { ensureMindbodyWebhookSubscription, getMindbodyWebhookSubscriptionStatus } from "@/lib/mindbody/webhooks-subscribe";
 import { ensureDefaultLineItemMappings } from "@/lib/sync/field-mappings";
 
 async function assertTenantAccess(tenantId: string) {
@@ -32,7 +32,7 @@ export async function GET(
 
   const supabase = getSupabase();
 
-  const [{ data: settings }, { data: mindbody }, { data: hubspot }] =
+  const [{ data: settings }, { data: mindbody }, { data: hubspot }, webhookStatus] =
     await Promise.all([
       supabase.from("sync_settings").select("*").eq("tenant_id", tenantId).single(),
       supabase
@@ -47,6 +47,7 @@ export async function GET(
         .select("portal_id, hub_domain, expires_at")
         .eq("tenant_id", tenantId)
         .maybeSingle(),
+      getMindbodyWebhookSubscriptionStatus(tenantId),
     ]);
 
   // Idempotent suggested defaults; never overwrites remaps.
@@ -68,6 +69,7 @@ export async function GET(
           staffUsername: mindbody.staff_username ?? undefined,
           staffConfigured: Boolean(mindbody.staff_username),
           staffPasswordConfigured: Boolean(mindbody.staff_password_encrypted),
+          webhookSubscription: webhookStatus,
         }
       : { configured: false },
     hubspot: hubspot
@@ -119,6 +121,7 @@ export async function PUT(
   };
 
   const supabase = getSupabase();
+  let webhookSubscriptionWarning: string | undefined;
 
   if (body.sync) {
     const syncUpdate: Record<string, unknown> = {
@@ -310,8 +313,24 @@ export async function PUT(
     try {
       await ensureMindbodyWebhookSubscription(tenantId, siteId);
     } catch (e) {
+      const message =
+        e instanceof Error ? e.message : "Mindbody webhook subscription failed";
       console.warn("Mindbody webhook subscription:", e);
+      webhookSubscriptionWarning = message;
     }
+    }
+  }
+
+  const mindbodyAccount = await getMindbodyAccountByTenant(tenantId);
+  const webhookStatus = await getMindbodyWebhookSubscriptionStatus(tenantId);
+  if (mindbodyAccount && !webhookStatus.configured) {
+    try {
+      await ensureMindbodyWebhookSubscription(tenantId, mindbodyAccount.site_id);
+    } catch (e) {
+      const message =
+        e instanceof Error ? e.message : "Mindbody webhook subscription failed";
+      console.warn("Mindbody webhook subscription recovery:", e);
+      webhookSubscriptionWarning ??= message;
     }
   }
 
@@ -329,7 +348,11 @@ export async function PUT(
     }
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({
+    ok: true,
+    webhookSubscriptionWarning,
+    webhookSubscription: await getMindbodyWebhookSubscriptionStatus(tenantId),
+  });
   } catch (e) {
     console.error("[settings] PUT failed:", e);
     return NextResponse.json(

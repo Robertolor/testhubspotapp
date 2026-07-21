@@ -17,6 +17,11 @@ interface SubscriptionResponse {
   Status?: string;
   webhookUrl?: string;
   eventIds?: string[];
+  referenceId?: string;
+}
+
+interface SubscriptionListResponse {
+  items?: SubscriptionResponse[];
 }
 
 function subscriptionIdFrom(data: SubscriptionResponse): string {
@@ -29,6 +34,10 @@ function subscriptionIdFrom(data: SubscriptionResponse): string {
 
 function messageSignatureKeyFrom(data: SubscriptionResponse): string | undefined {
   return data.MessageSignatureKey ?? data.messageSignatureKey;
+}
+
+function referenceIdFor(tenantId: string): string {
+  return `tenant-${tenantId}`;
 }
 
 async function remoteSubscriptionIsActive(
@@ -44,6 +53,74 @@ async function remoteSubscriptionIsActive(
   const data = (await res.json()) as SubscriptionResponse;
   const status = data.Status ?? data.status;
   return status === "Active";
+}
+
+async function listRemoteSubscriptions(
+  apiKey: string
+): Promise<SubscriptionResponse[]> {
+  const res = await fetch(`${MINDBODY_WEBHOOKS_API}/subscriptions`, {
+    headers: { "API-Key": apiKey },
+  });
+  if (!res.ok) return [];
+
+  const data = (await res.json()) as SubscriptionListResponse;
+  return data.items ?? [];
+}
+
+async function deleteRemoteSubscription(
+  subscriptionId: string,
+  apiKey: string
+): Promise<void> {
+  await fetch(`${MINDBODY_WEBHOOKS_API}/subscriptions/${subscriptionId}`, {
+    method: "DELETE",
+    headers: { "API-Key": apiKey },
+  });
+}
+
+async function deleteRemoteSubscriptionsForTenant(
+  tenantId: string,
+  apiKey: string,
+  exceptSubscriptionId?: string
+): Promise<void> {
+  const referenceId = referenceIdFor(tenantId);
+  const remoteItems = await listRemoteSubscriptions(apiKey);
+
+  for (const item of remoteItems) {
+    if (item.referenceId !== referenceId) continue;
+
+    const subscriptionId = subscriptionIdFrom(item);
+    if (exceptSubscriptionId && subscriptionId === exceptSubscriptionId) {
+      continue;
+    }
+
+    await deleteRemoteSubscription(subscriptionId, apiKey);
+  }
+}
+
+export async function getMindbodyWebhookSubscriptionStatus(
+  tenantId: string
+): Promise<{
+  configured: boolean;
+  status?: string;
+  subscriptionId?: string;
+  webhookUrl?: string;
+}> {
+  const { data: existing } = await getSupabase()
+    .from("mindbody_webhook_subscriptions")
+    .select("subscription_id, status, webhook_url")
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+
+  if (!existing?.subscription_id) {
+    return { configured: false };
+  }
+
+  return {
+    configured: true,
+    status: existing.status,
+    subscriptionId: existing.subscription_id,
+    webhookUrl: existing.webhook_url,
+  };
 }
 
 export async function ensureMindbodyWebhookSubscription(
@@ -67,16 +144,9 @@ export async function ensureMindbodyWebhookSubscription(
     if (stillActive) {
       return;
     }
-
-    await fetch(
-      `${MINDBODY_WEBHOOKS_API}/subscriptions/${existing.subscription_id}`,
-      { method: "DELETE", headers: { "API-Key": apiKey } }
-    );
-    await getSupabase()
-      .from("mindbody_webhook_subscriptions")
-      .delete()
-      .eq("tenant_id", tenantId);
   }
+
+  await deleteRemoteSubscriptionsForTenant(tenantId, apiKey);
 
   const createRes = await fetch(`${MINDBODY_WEBHOOKS_API}/subscriptions`, {
     method: "POST",
@@ -87,7 +157,7 @@ export async function ensureMindbodyWebhookSubscription(
     body: JSON.stringify({
       eventIds: [...MINDBODY_WEBHOOK_EVENTS],
       eventSchemaVersion: 1,
-      referenceId: `tenant-${tenantId}`,
+      referenceId: referenceIdFor(tenantId),
       webhookUrl,
     }),
   });
@@ -129,6 +199,8 @@ export async function ensureMindbodyWebhookSubscription(
   if (!sigKey) {
     throw new Error("Mindbody subscription response missing message signature key");
   }
+
+  await deleteRemoteSubscriptionsForTenant(tenantId, apiKey, subscriptionId);
 
   await getSupabase().from("mindbody_webhook_subscriptions").upsert(
     {
