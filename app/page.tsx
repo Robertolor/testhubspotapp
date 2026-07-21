@@ -48,6 +48,12 @@ export default async function HomePage({
           <li>• Webhooks from HubSpot and Mindbody</li>
           <li>• Configurable sync direction for contacts and deals</li>
         </ul>
+
+        <p className="mt-12 text-sm text-slate-500">
+          <Link href="/privacy" className="text-teal-700 hover:underline">
+            Privacy Policy
+          </Link>
+        </p>
       </div>
     </div>
   );

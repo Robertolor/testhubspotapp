@@ -1,52 +1,68 @@
-# HubSpot Marketplace checklist
+# HubSpot Marketplace checklist (1.0)
 
-Use this on staging before submitting the app for review.
+Public app: `https://testhubspotapp.vercel.app`  
+Listing notes: see [LISTING.md](./LISTING.md)
+
+## Status legend
+
+- **Done** — validated for this tenant / staging
+- **You** — manual HubSpot / Mindbody / ops step
+- **Build** — app work still needed for listing
+- **Later** — explicitly deferred past 1.0
 
 ## HubSpot developer app
 
-- [ ] Create public OAuth app in [HubSpot developers](https://developers.hubspot.com/)
-- [ ] Set redirect URL: `https://<staging>/api/oauth/hubspot/callback`
-- [ ] Request scopes: `oauth`, contacts/deals/line_items read+write, schemas contacts/deals read+write, `crm.schemas.line_items.read` (no `schemas.line_items.write` — HubSpot does not offer it)
-- [ ] Set `HUBSPOT_APP_ID` for webhook subscription API
-- [ ] Sign Acceptable Use Policy (Distribution tab) for non-test installs
+- [x] **Done** — Public OAuth app exists; install works on staging
+- [x] **Done** — Redirect: `https://testhubspotapp.vercel.app/api/oauth/hubspot/callback`
+- [x] **Done** — Scopes in `lib/hubspot/config.ts` (contacts/deals/line items + schemas)
+- [ ] **You** — Confirm `HUBSPOT_APP_ID` is set in Vercel Production
+- [ ] **You** — Sign Acceptable Use Policy (Distribution tab)
 
 ## Install flow
 
-- [ ] Install via sample install URL → lands on `/setup`
-- [ ] Session cookie issued; dashboard routes accessible
-- [ ] Custom HubSpot properties created under **mindbody_sync** group
+- [x] **Done** — Install → `/setup`
+- [x] **Done** — Session cookie; dashboard routes work
+- [x] **Done** — Custom HubSpot properties under **mindbody_sync**
 
-## Mindbody
+## Mindbody (1.0 credential model)
 
-- [ ] Developer account approved for live API access
-- [ ] Business activated with developer API key
-- [ ] Save Site ID, API key, and staff login in Settings → connection test passes
-- [ ] Webhook subscription created and active
+- [ ] **You** — Developer account approved for live API access (when leaving sandbox)
+- [x] **Done** — Sandbox site `-99` connectable with Site ID + API key + staff login
+- [x] **Done** — Webhook subscription create/activate path exists; verify Active in Mindbody metrics
+- [ ] **Later** — Commercial site activation (no customer API keys) → **1.0.1**
 
 ## Sync E2E
 
-- [ ] Enable contacts `mb_to_hs` → create client in Mindbody → contact in HubSpot
-- [ ] Enable contacts `hs_to_mb` → update contact in HubSpot → Mindbody client updates
-- [ ] Enable deals → contract/sale in Mindbody → deal in HubSpot with association
-- [ ] Reports show sync runs; errors visible with entity + external ID
-- [ ] Backfill contacts completes without timeout (use Inngest in production)
+- [x] **Done** — Contacts via Test Sync (`mb_to_hs`)
+- [ ] **You** — Optional: confirm `hs_to_mb` if you advertise bi-directional contacts
+- [x] **Done** — Deals (sales/contracts) + line items when sale has items
+- [x] **Done** — Pipeline stage mappings in Settings
+- [x] **Done** — Reports show runs; failures/skips visible (failures now in Events too)
+- [ ] **Later** — Large backfill (1000s) without timeout → queue after 1.0
 
 ## Webhooks
 
-- [ ] Invalid HubSpot signature returns 401
-- [ ] Invalid Mindbody signature returns 401
-- [ ] Duplicate deliveries deduplicated (idempotency key)
-- [ ] Replay via `POST /api/tenants/[id]/webhooks/replay` with `deliveryId`
+- [x] **Done** — Invalid HubSpot / Mindbody signatures rejected
+- [x] **Done** — Idempotent deliveries
+- [x] **Done** — Replay route exists
+- [ ] **Later** — Treat Mindbody sandbox UI webhooks as unreliable; validate on live site
 
 ## Security
 
-- [ ] Tokens encrypted at rest (`TOKEN_ENCRYPTION_KEY`)
-- [ ] API keys never returned from settings GET
-- [ ] Service role key only on server
+- [x] **Done** — Tokens encrypted (`TOKEN_ENCRYPTION_KEY`)
+- [x] **Done** — API keys not returned from settings GET
+- [x] **Done** — Service role key server-only
 
-## Listing (when ready)
+## Listing pack
 
-- [ ] Privacy policy URL
-- [ ] Support contact email
-- [ ] Screenshots of setup, settings, reports
-- [ ] Pricing model documented
+- [x] **Build** — Privacy policy page: `/privacy`
+- [ ] **You** — Set `NEXT_PUBLIC_SUPPORT_EMAIL` in Vercel and redeploy
+- [ ] **You** — Capture screenshots (see LISTING.md)
+- [x] **Build** — Pricing model draft in LISTING.md (free/beta for 1.0)
+- [ ] **You** — Paste privacy URL, support email, copy, screenshots into HubSpot listing
+
+## After 1.0 (do not block listing)
+
+- Durable job queue (Inngest or equivalent)
+- Mindbody commercial activation onboarding
+- Value-mapping UI (if still desired)
