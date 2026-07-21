@@ -98,21 +98,43 @@ function normalizeLabel(value: string): string {
   return value.trim().toLowerCase();
 }
 
-function findStageId(
+type StageMatchKind = "exact" | "partial" | "fallback" | "none";
+
+function findStageMatch(
   pipeline: HubspotDealPipeline,
   stageLabel: string
-): string | undefined {
+): {
+  stageId?: string;
+  matched: StageMatchKind;
+  appliedLabel?: string;
+} {
   const target = normalizeLabel(stageLabel);
   const exact = pipeline.stages.find(
     (stage) => normalizeLabel(stage.label) === target
   );
-  if (exact) return exact.id;
+  if (exact) {
+    return { stageId: exact.id, matched: "exact", appliedLabel: exact.label };
+  }
 
   const partial = pipeline.stages.find((stage) => {
     const label = normalizeLabel(stage.label);
     return label.includes(target) || target.includes(label);
   });
-  return partial?.id ?? pipeline.stages[0]?.id;
+  if (partial) {
+    return {
+      stageId: partial.id,
+      matched: "partial",
+      appliedLabel: partial.label,
+    };
+  }
+
+  const first = pipeline.stages[0];
+  if (!first) return { matched: "none" };
+  return {
+    stageId: first.id,
+    matched: "fallback",
+    appliedLabel: first.label,
+  };
 }
 
 async function loadPipeline(
@@ -134,20 +156,31 @@ async function loadPipeline(
   return pipeline;
 }
 
+export type ResolvedDealPipeline = {
+  properties: {
+    pipeline?: string;
+    dealstage?: string;
+    closedate?: string;
+  };
+  stageWarning?: string;
+};
+
 export async function resolveDealPipelineProperties(
   accessToken: string,
   settings: SyncSettings,
   source: DealPipelineSource,
   payload: Record<string, unknown>
-): Promise<{ pipeline?: string; dealstage?: string; closedate?: string }> {
+): Promise<ResolvedDealPipeline> {
   const pipelineId = settings.deals_pipeline_id?.trim();
-  if (!pipelineId) return {};
+  if (!pipelineId) return { properties: {} };
 
   const pipeline = await loadPipeline(accessToken, pipelineId);
-  if (!pipeline || pipeline.stages.length === 0) return { pipeline: pipelineId };
+  if (!pipeline || pipeline.stages.length === 0) {
+    return { properties: { pipeline: pipelineId } };
+  }
 
   const stageLabel = stageLabelForDealSource(source, payload);
-  const dealstage = findStageId(pipeline, stageLabel);
+  const stageMatch = findStageMatch(pipeline, stageLabel);
 
   const closedate =
     source === "contract"
@@ -160,9 +193,17 @@ export async function resolveDealPipelineProperties(
           )
         : isoDateOnly(payload.start_datetime ?? payload.startDatetime);
 
+  const stageWarning =
+    stageMatch.matched === "fallback"
+      ? `Pipeline stage "${stageLabel}" not found in "${pipeline.label}"; used first stage "${stageMatch.appliedLabel}" instead`
+      : undefined;
+
   return {
-    pipeline: pipelineId,
-    ...(dealstage ? { dealstage } : {}),
-    ...(closedate ? { closedate } : {}),
+    properties: {
+      pipeline: pipelineId,
+      ...(stageMatch.stageId ? { dealstage: stageMatch.stageId } : {}),
+      ...(closedate ? { closedate } : {}),
+    },
+    stageWarning,
   };
 }

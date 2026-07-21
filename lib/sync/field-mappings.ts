@@ -70,6 +70,16 @@ export const DEFAULT_DEAL_MAPPINGS: DefaultFieldMapping[] = [
   },
   {
     entity_type: "deal",
+    hubspot_property: "dealname",
+    mindbody_field: "deal_name",
+    is_custom: false,
+    is_system: false,
+    hubspot_property_type: "string",
+    mindbody_field_type: "string",
+    mindbody_source: "sale",
+  },
+  {
+    entity_type: "deal",
     hubspot_property: "amount",
     mindbody_field: "totalAmount",
     is_custom: false,

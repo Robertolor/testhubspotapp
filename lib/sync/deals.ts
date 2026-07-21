@@ -35,7 +35,24 @@ export type SyncDealResult = {
   dealId: string;
   action: SyncWriteAction;
   lineItems?: SyncLineItemResult[];
+  lineItemSummary?: {
+    attempted: boolean;
+    reason?: string;
+  };
+  warnings?: string[];
 };
+
+function deriveSaleDealName(payload: Record<string, unknown>): string {
+  const saleId = String(payload.saleId ?? "");
+  if (!saleId) return "Mindbody Sale";
+  return `Sale ${saleId}`;
+}
+
+function pipelineWarnings(
+  resolved: Awaited<ReturnType<typeof resolveDealPipelineProperties>>
+): string[] {
+  return resolved.stageWarning ? [resolved.stageWarning] : [];
+}
 
 async function queuePendingDealContactAssociation(
   tenantId: string,
@@ -119,14 +136,16 @@ export async function syncContractToHubspotDeal(
     deal_source: "mindbody_contract",
   };
 
+  const pipeline = await resolveDealPipelineProperties(
+    accessToken,
+    settings,
+    "contract",
+    normalizedPayload
+  );
+
   const dealProps = {
     ...applyDealMappings(mappings, normalizedPayload, "contract"),
-    ...(await resolveDealPipelineProperties(
-      accessToken,
-      settings,
-      "contract",
-      normalizedPayload
-    )),
+    ...pipeline.properties,
     deal_source: "mindbody_contract",
     mindbody_contract_id: clientContractId,
     mindbody_client_id: clientUniqueId,
@@ -175,7 +194,7 @@ export async function syncContractToHubspotDeal(
     }
   }
 
-  return { dealId, action };
+  return { dealId, action, warnings: pipelineWarnings(pipeline) };
 }
 
 export async function syncSaleToHubspotDeal(
@@ -231,20 +250,25 @@ export async function syncSaleToHubspotDeal(
     saleDateTime: payload.saleDateTime ?? payload.originalSaleDateTime,
     originalSaleDateTime: payload.originalSaleDateTime,
     deal_source: "mindbody_sale",
+    deal_name: deriveSaleDealName({ saleId }),
   };
 
+  const mapped = applyDealMappings(mappings, normalizedPayload, "sale");
+  const pipeline = await resolveDealPipelineProperties(
+    accessToken,
+    settings,
+    "sale",
+    normalizedPayload
+  );
+
   const dealProps = {
-    ...applyDealMappings(mappings, normalizedPayload, "sale"),
-    ...(await resolveDealPipelineProperties(
-      accessToken,
-      settings,
-      "sale",
-      normalizedPayload
-    )),
+    ...mapped,
+    ...pipeline.properties,
     deal_source: "mindbody_sale",
     mindbody_sale_id: saleId,
     mindbody_client_id: clientId,
     amount: amount !== undefined ? String(amount) : undefined,
+    dealname: mapped.dealname || deriveSaleDealName(normalizedPayload),
   };
 
   let action: SyncWriteAction;
@@ -287,6 +311,9 @@ export async function syncSaleToHubspotDeal(
   }
 
   let lineItems: SyncLineItemResult[] | undefined;
+  let lineItemSummary: SyncDealResult["lineItemSummary"] = {
+    attempted: false,
+  };
   if (settings.line_items_enabled && mindbodyAccount && clientId) {
     lineItems = await syncLineItemsForSale(
       tenantId,
@@ -297,9 +324,33 @@ export async function syncSaleToHubspotDeal(
       clientId,
       dealId
     );
+    lineItemSummary = {
+      attempted: true,
+      reason:
+        lineItems.length === 0
+          ? "No line items found on Mindbody sale purchase rows"
+          : undefined,
+    };
+  } else {
+    lineItemSummary = {
+      attempted: false,
+      reason: !settings.line_items_enabled
+        ? "Line item sync is disabled in runtime controls"
+        : !mindbodyAccount
+          ? "Mindbody account missing"
+          : !clientId
+            ? "Sale payload missing client ID"
+            : undefined,
+    };
   }
 
-  return { dealId, action, lineItems };
+  return {
+    dealId,
+    action,
+    lineItems,
+    lineItemSummary,
+    warnings: pipelineWarnings(pipeline),
+  };
 }
 
 export async function syncAppointmentToHubspotDeal(
@@ -349,14 +400,15 @@ export async function syncAppointmentToHubspotDeal(
       : null;
 
   const mappings = await getFieldMappings(tenantId, "deal");
+  const pipeline = await resolveDealPipelineProperties(
+    accessToken,
+    settings,
+    "appointment",
+    normalized
+  );
   const dealProps = {
     ...applyDealMappings(mappings, normalized, "appointment"),
-    ...(await resolveDealPipelineProperties(
-      accessToken,
-      settings,
-      "appointment",
-      normalized
-    )),
+    ...pipeline.properties,
     deal_source: "mindbody_appointment",
     mindbody_appointment_id: appointmentId,
     mindbody_client_id: clientId || undefined,
@@ -403,7 +455,7 @@ export async function syncAppointmentToHubspotDeal(
     }
   }
 
-  return { dealId, action };
+  return { dealId, action, warnings: pipelineWarnings(pipeline) };
 }
 
 export async function syncVisitToHubspotDeal(
@@ -450,14 +502,15 @@ export async function syncVisitToHubspotDeal(
       : null;
 
   const mappings = await getFieldMappings(tenantId, "deal");
+  const pipeline = await resolveDealPipelineProperties(
+    accessToken,
+    settings,
+    "visit",
+    normalized
+  );
   const dealProps = {
     ...applyDealMappings(mappings, normalized, "visit"),
-    ...(await resolveDealPipelineProperties(
-      accessToken,
-      settings,
-      "visit",
-      normalized
-    )),
+    ...pipeline.properties,
     deal_source: "mindbody_visit",
     mindbody_visit_id: visitId,
     mindbody_client_id: clientId || undefined,
@@ -503,5 +556,5 @@ export async function syncVisitToHubspotDeal(
     }
   }
 
-  return { dealId, action };
+  return { dealId, action, warnings: pipelineWarnings(pipeline) };
 }

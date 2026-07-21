@@ -23,6 +23,7 @@ export class TestSyncLogger {
       message?: string;
       sourceId?: string;
       targetId?: string;
+      entityType?: EntityType;
       detail?: Record<string, unknown>;
     }
   ): Promise<void> {
@@ -35,7 +36,7 @@ export class TestSyncLogger {
     await logSyncEvent(
       this.runId,
       this.tenantId,
-      this.entityType,
+      opts?.entityType ?? this.entityType,
       "mb_to_hs",
       status,
       message,

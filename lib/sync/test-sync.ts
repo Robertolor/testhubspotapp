@@ -464,6 +464,14 @@ export async function runTestSync(
             message: result.action,
           });
 
+          for (const warning of result.warnings ?? []) {
+            await log.record("syncDeal.pipeline", "skipped", {
+              sourceId: externalId,
+              targetId: result.dealId,
+              message: warning,
+            });
+          }
+
           if (result.lineItems?.length) {
             for (const lineItem of result.lineItems) {
               processed++;
@@ -471,8 +479,17 @@ export async function runTestSync(
                 sourceId: lineItem.lineItemKey,
                 targetId: lineItem.hubspotId,
                 message: lineItem.action,
+                entityType: "line_item",
               });
             }
+          } else if (item.kind === "sale" && result.lineItemSummary?.attempted) {
+            await log.record("syncLineItem", "skipped", {
+              sourceId: externalId,
+              message:
+                result.lineItemSummary.reason ??
+                "Line item sync ran but no line items were found",
+              entityType: "line_item",
+            });
           }
         } catch (e) {
           failed++;

@@ -16,6 +16,27 @@ import {
 import { ensureHubspotPropertiesForTenant } from "@/lib/sync/ensure-hubspot-properties";
 import type { SyncSettings } from "@/lib/db/types";
 import { normalizeSyncSettings, purchaseQualifiesForSync } from "@/lib/sync/runtime-rules";
+import type { SyncDealResult } from "@/lib/sync/deals";
+
+async function logDealSyncWarnings(
+  runId: string,
+  tenantId: string,
+  result: SyncDealResult,
+  sourceId?: string
+): Promise<void> {
+  for (const warning of result.warnings ?? []) {
+    await logSyncEvent(
+      runId,
+      tenantId,
+      "deal",
+      "mb_to_hs",
+      "skipped",
+      warning,
+      sourceId,
+      result.dealId
+    );
+  }
+}
 
 export interface ProcessWebhookInput {
   tenantId: string;
@@ -236,6 +257,12 @@ async function processMindbodyEvent(
       String(data.clientContractId ?? ""),
       result.dealId
     );
+    await logDealSyncWarnings(
+      runId,
+      tenantId,
+      result,
+      String(data.clientContractId ?? "")
+    );
     return;
   }
 
@@ -283,6 +310,27 @@ async function processMindbodyEvent(
         lineItem.hubspotId
       );
     }
+    if (
+      result.lineItemSummary?.attempted &&
+      (result.lineItems?.length ?? 0) === 0
+    ) {
+      await logSyncEvent(
+        runId,
+        tenantId,
+        "line_item",
+        "mb_to_hs",
+        "skipped",
+        result.lineItemSummary.reason ??
+          "Line item sync ran but no line items were returned",
+        String(data.saleId ?? "")
+      );
+    }
+    await logDealSyncWarnings(
+      runId,
+      tenantId,
+      result,
+      String(data.saleId ?? "")
+    );
   }
 }
 
