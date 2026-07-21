@@ -29,6 +29,21 @@ export async function createSyncRun(
   return data.id as string;
 }
 
+export async function updateSyncRunProgress(
+  runId: string,
+  processed: number,
+  failed: number
+): Promise<void> {
+  await getSupabase()
+    .from("sync_runs")
+    .update({
+      records_processed: processed,
+      records_failed: failed,
+    })
+    .eq("id", runId)
+    .eq("status", "running");
+}
+
 export async function completeSyncRun(
   runId: string,
   status: SyncRunStatus,
@@ -44,6 +59,82 @@ export async function completeSyncRun(
       completed_at: new Date().toISOString(),
     })
     .eq("id", runId);
+}
+
+/** Close runs left "running" after the worker was killed (Vercel timeout, crash). */
+export async function reconcileStaleSyncRuns(
+  tenantId: string,
+  olderThanMs = 2 * 60 * 1000
+): Promise<number> {
+  const cutoff = new Date(Date.now() - olderThanMs).toISOString();
+  const { data: stale } = await getSupabase()
+    .from("sync_runs")
+    .select("id, entity_type")
+    .eq("tenant_id", tenantId)
+    .eq("status", "running")
+    .lt("started_at", cutoff);
+
+  if (!stale?.length) return 0;
+
+  let closed = 0;
+  for (const run of stale) {
+    const { data: events } = await getSupabase()
+      .from("sync_events")
+      .select("status, message, source_id")
+      .eq("sync_run_id", run.id);
+
+    const { count: errorCount } = await getSupabase()
+      .from("sync_errors")
+      .select("id", { count: "exact", head: true })
+      .eq("sync_run_id", run.id);
+
+    const list = events ?? [];
+    const processed = list.filter(
+      (e) =>
+        e.status === "success" &&
+        e.source_id &&
+        (e.message === "created" || e.message === "updated")
+    ).length;
+    const failedFromEvents = list.filter((e) => e.status === "failed").length;
+    const failed = Math.max(failedFromEvents, errorCount ?? 0);
+
+    const status: SyncRunStatus =
+      failed > 0
+        ? processed > 0
+          ? "partial"
+          : "failed"
+        : processed > 0
+          ? "completed"
+          : "failed";
+
+    const { data: updated } = await getSupabase()
+      .from("sync_runs")
+      .update({
+        status,
+        records_processed: processed,
+        records_failed: failed,
+        completed_at: new Date().toISOString(),
+      })
+      .eq("id", run.id)
+      .eq("status", "running")
+      .select("id")
+      .maybeSingle();
+
+    if (!updated) continue;
+
+    const entityType = (run.entity_type as EntityType | null) ?? "contact";
+    await logSyncEvent(
+      run.id,
+      tenantId,
+      entityType,
+      "system",
+      "skipped",
+      "Run interrupted before completion (server timeout or crash); status reconciled from events"
+    );
+    closed++;
+  }
+
+  return closed;
 }
 
 export async function logSyncEvent(

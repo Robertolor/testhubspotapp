@@ -52,6 +52,15 @@ export class TestSyncLogger {
   ): Promise<void> {
     const message = error instanceof Error ? error.message : String(error);
     this.step(phase, { status: "failed", error: message, externalId });
+    await logSyncEvent(
+      this.runId,
+      this.tenantId,
+      this.entityType,
+      "mb_to_hs",
+      "failed",
+      `[${phase}] ${message}`,
+      externalId
+    );
     await logSyncError(this.tenantId, `[${phase}] ${message}`, {
       syncRunId: this.runId,
       entityType: this.entityType,

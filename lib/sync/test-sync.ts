@@ -22,6 +22,7 @@ import { ensureHubspotPropertiesForTenant } from "@/lib/sync/ensure-hubspot-prop
 import {
   completeSyncRun,
   createSyncRun,
+  updateSyncRunProgress,
 } from "@/lib/sync/runs";
 import { normalizeSyncSettings } from "@/lib/sync/runtime-rules";
 import { TestSyncLogger } from "@/lib/sync/test-logger";
@@ -319,6 +320,10 @@ export async function runTestSync(
     await completeSyncRun(runId, status, p, f);
   };
 
+  const bumpProgress = async () => {
+    await updateSyncRunProgress(runId, processed, failed);
+  };
+
   log.step("runTestSync.start", {
     entityType,
     limit: TEST_SYNC_RECORD_LIMIT,
@@ -383,9 +388,11 @@ export async function runTestSync(
             message: result.action,
             detail: { email: client.Email },
           });
+          await bumpProgress();
         } catch (e) {
           failed++;
           await log.fail("syncContact", e, clientId);
+          await bumpProgress();
         }
       }
     }
@@ -491,9 +498,11 @@ export async function runTestSync(
               entityType: "line_item",
             });
           }
+          await bumpProgress();
         } catch (e) {
           failed++;
           await log.fail(`syncDeal.${item.kind}`, e, externalId);
+          await bumpProgress();
         }
       }
     }

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { getSupabase } from "@/lib/db/client";
+import { reconcileStaleSyncRuns } from "@/lib/sync/runs";
 import { Card, CardTitle } from "@/components/ui/card";
 
 function isWriteAction(
@@ -19,6 +20,8 @@ export default async function RunDetailPage({
   if (!session) redirect("/");
 
   const { runId } = await params;
+
+  await reconcileStaleSyncRuns(session.tenantId);
 
   const { data: run, error } = await getSupabase()
     .from("sync_runs")

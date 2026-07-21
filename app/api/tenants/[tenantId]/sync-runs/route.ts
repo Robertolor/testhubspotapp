@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { getSupabase } from "@/lib/db/client";
+import { reconcileStaleSyncRuns } from "@/lib/sync/runs";
 
 export async function GET(
   request: NextRequest,
@@ -11,6 +12,8 @@ export async function GET(
   if (!session || session.tenantId !== tenantId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  await reconcileStaleSyncRuns(tenantId);
 
   const limit = Number(request.nextUrl.searchParams.get("limit") ?? "20");
   const status = request.nextUrl.searchParams.get("status");

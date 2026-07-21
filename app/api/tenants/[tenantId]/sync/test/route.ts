@@ -5,8 +5,8 @@ import { dispatchTestSync } from "@/lib/inngest/dispatch";
 import { TEST_SYNC_RECORD_LIMIT } from "@/lib/sync/test-sync";
 import type { EntityType } from "@/lib/db/types";
 
-/** TEMP: test sync may run up to 20 Mindbody → HubSpot operations */
-export const maxDuration = 60;
+/** Deal test sync can exceed 60s (sales + line items + appointments). */
+export const maxDuration = 300;
 
 export async function POST(
   request: NextRequest,

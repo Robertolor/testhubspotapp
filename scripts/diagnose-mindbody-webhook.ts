@@ -1,6 +1,9 @@
+/**
+ * Diagnose Mindbody webhook subscription + recent deliveries.
+ * Usage: npx tsx scripts/diagnose-mindbody-webhook.ts
+ */
 import { existsSync, readFileSync } from "fs";
 import { resolve } from "path";
-import { getSupabase } from "../lib/db/client";
 import {
   getMindbodyDeveloperApiKey,
   MINDBODY_WEBHOOKS_API,
@@ -28,23 +31,50 @@ function loadEnvLocal(): void {
   }
 }
 
+async function supabaseGet(
+  table: string,
+  query: string
+): Promise<unknown> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+  }
+
+  const res = await fetch(`${url}/rest/v1/${table}?${query}`, {
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      Prefer: "return=representation",
+    },
+  });
+  if (!res.ok) {
+    throw new Error(`${table} query failed: ${res.status} ${await res.text()}`);
+  }
+  return res.json();
+}
+
 async function main(): Promise<void> {
   loadEnvLocal();
   const apiKey = getMindbodyDeveloperApiKey();
-  const supabase = getSupabase();
 
-  const { data: account } = await supabase
-    .from("mindbody_accounts")
-    .select("tenant_id, site_id, staff_username, updated_at")
-    .eq("tenant_id", TENANT_ID)
-    .maybeSingle();
-  console.log("mindbody_accounts:", account);
+  const accounts = (await supabaseGet(
+    "mindbody_accounts",
+    `select=tenant_id,site_id,staff_username,updated_at&tenant_id=eq.${TENANT_ID}`
+  )) as unknown[];
+  console.log("mindbody_accounts:", accounts[0] ?? null);
 
-  const { data: sub } = await supabase
-    .from("mindbody_webhook_subscriptions")
-    .select("*")
-    .eq("tenant_id", TENANT_ID)
-    .maybeSingle();
+  const subs = (await supabaseGet(
+    "mindbody_webhook_subscriptions",
+    `select=subscription_id,status,webhook_url,event_ids,updated_at&tenant_id=eq.${TENANT_ID}`
+  )) as Array<{
+    subscription_id?: string;
+    status?: string;
+    webhook_url?: string;
+    event_ids?: string[];
+    updated_at?: string;
+  }>;
+  const sub = subs[0];
   console.log("local subscription row:", {
     subscription_id: sub?.subscription_id,
     status: sub?.status,
@@ -68,30 +98,17 @@ async function main(): Promise<void> {
   console.log("\nMindbody list subscriptions status:", listRes.status);
   console.log(await listRes.text());
 
-  const { data: deliveries } = await supabase
-    .from("webhook_deliveries")
-    .select("id, status, created_at, idempotency_key, error_message, processed_at")
-    .eq("tenant_id", TENANT_ID)
-    .order("created_at", { ascending: false })
-    .limit(5);
+  const deliveries = await supabaseGet(
+    "webhook_deliveries",
+    `select=id,status,created_at,idempotency_key,error_message,processed_at&tenant_id=eq.${TENANT_ID}&order=created_at.desc&limit=5`
+  );
   console.log("\nlatest tenant deliveries:", deliveries);
 
-  const { data: settings } = await supabase
-    .from("sync_settings")
-    .select(
-      "contacts_enabled, contacts_direction, deals_enabled, deals_direction, line_items_enabled"
-    )
-    .eq("tenant_id", TENANT_ID)
-    .maybeSingle();
-  console.log("\nsync_settings:", settings);
-
-  const { data: runs } = await supabase
-    .from("sync_runs")
-    .select("id, status, trigger, created_at, error_message")
-    .eq("tenant_id", TENANT_ID)
-    .order("created_at", { ascending: false })
-    .limit(3);
-  console.log("\nlatest sync_runs:", runs);
+  const settings = (await supabaseGet(
+    "sync_settings",
+    `select=contacts_enabled,contacts_direction,deals_enabled,deals_direction,line_items_enabled&tenant_id=eq.${TENANT_ID}`
+  )) as unknown[];
+  console.log("\nsync_settings:", settings[0] ?? null);
 
   const metricsRes = await fetch(`${MINDBODY_WEBHOOKS_API}/metrics`, {
     headers: { "API-Key": apiKey },
