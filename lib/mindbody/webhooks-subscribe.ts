@@ -31,9 +31,24 @@ function messageSignatureKeyFrom(data: SubscriptionResponse): string | undefined
   return data.MessageSignatureKey ?? data.messageSignatureKey;
 }
 
+async function remoteSubscriptionIsActive(
+  subscriptionId: string,
+  apiKey: string
+): Promise<boolean> {
+  const res = await fetch(
+    `${MINDBODY_WEBHOOKS_API}/subscriptions/${subscriptionId}`,
+    { headers: { "API-Key": apiKey } }
+  );
+  if (!res.ok) return false;
+
+  const data = (await res.json()) as SubscriptionResponse;
+  const status = data.Status ?? data.status;
+  return status === "Active";
+}
+
 export async function ensureMindbodyWebhookSubscription(
   tenantId: string,
-  siteId: number
+  _siteId: number
 ): Promise<void> {
   const webhookUrl = `${getAppUrl()}/api/webhooks/mindbody`;
   const apiKey = getMindbodyDeveloperApiKey();
@@ -44,8 +59,23 @@ export async function ensureMindbodyWebhookSubscription(
     .eq("tenant_id", tenantId)
     .maybeSingle();
 
-  if (existing?.status === "active") {
-    return;
+  if (existing?.status === "active" && existing.subscription_id) {
+    const stillActive = await remoteSubscriptionIsActive(
+      existing.subscription_id,
+      apiKey
+    );
+    if (stillActive) {
+      return;
+    }
+
+    await fetch(
+      `${MINDBODY_WEBHOOKS_API}/subscriptions/${existing.subscription_id}`,
+      { method: "DELETE", headers: { "API-Key": apiKey } }
+    );
+    await getSupabase()
+      .from("mindbody_webhook_subscriptions")
+      .delete()
+      .eq("tenant_id", tenantId);
   }
 
   const createRes = await fetch(`${MINDBODY_WEBHOOKS_API}/subscriptions`, {
