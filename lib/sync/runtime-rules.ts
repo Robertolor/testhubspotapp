@@ -1,4 +1,5 @@
 import type { SyncSettings } from "@/lib/db/types";
+import { normalizeDealStageMappings } from "@/lib/sync/deal-stage-mappings";
 
 export type RuntimeEntity =
   | "contact"
@@ -98,5 +99,6 @@ export function normalizeSyncSettings(
       row.deals_pipeline_id != null && String(row.deals_pipeline_id).trim()
         ? String(row.deals_pipeline_id).trim()
         : null,
+    deal_stage_mappings: normalizeDealStageMappings(row.deal_stage_mappings),
   };
 }

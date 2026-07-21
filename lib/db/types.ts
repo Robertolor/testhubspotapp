@@ -42,6 +42,24 @@ export interface MindbodyAccount {
   oauth_expires_at: string | null;
 }
 
+/** Maps stable Mindbody logical stages to HubSpot deal stage IDs. */
+export type DealStageMappings = Partial<
+  Record<
+    | "sale.completed"
+    | "contract.upcoming"
+    | "contract.active"
+    | "contract.ended"
+    | "appointment.scheduled"
+    | "appointment.completed"
+    | "appointment.no_show"
+    | "appointment.cancelled"
+    | "visit.attended"
+    | "visit.missed"
+    | "visit.cancelled",
+    string
+  >
+>;
+
 export interface SyncSettings {
   tenant_id: string;
   contacts_enabled: boolean;
@@ -59,6 +77,8 @@ export interface SyncSettings {
   assoc_purchase_to_contract: boolean;
   /** HubSpot deal pipeline ID for synced deals. null = HubSpot default behavior. */
   deals_pipeline_id: string | null;
+  /** Mindbody logical stage key → HubSpot stage ID for deals_pipeline_id. */
+  deal_stage_mappings: DealStageMappings;
 }
 
 export type MindbodyMappingSource =

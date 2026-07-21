@@ -1,9 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ActionFeedback } from "@/components/ui/action-feedback";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
+import {
+  DEAL_STAGE_MAPPING_CATALOG,
+  type DealStageMappingKey,
+} from "@/lib/sync/deal-stage-mappings";
+import type { DealStageMappings } from "@/lib/db/types";
 
 type SyncDirection = "mb_to_hs" | "hs_to_mb" | "bidirectional";
 
@@ -29,6 +34,7 @@ interface SettingsData {
     assoc_line_item_to_deal?: boolean;
     assoc_purchase_to_contract?: boolean;
     deals_pipeline_id?: string | null;
+    deal_stage_mappings?: DealStageMappings;
   };
   mindbody?: {
     siteId?: number;
@@ -75,6 +81,9 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
   const [assocLineItemToDeal, setAssocLineItemToDeal] = useState(false);
   const [assocPurchaseToContract, setAssocPurchaseToContract] = useState(false);
   const [dealsPipelineId, setDealsPipelineId] = useState("");
+  const [dealStageMappings, setDealStageMappings] = useState<DealStageMappings>(
+    {}
+  );
   const [pipelineOptions, setPipelineOptions] = useState<HubspotPipelineOption[]>(
     []
   );
@@ -87,6 +96,30 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
   const [backfillFeedback, setBackfillFeedback] = useState<string | null>(null);
 
   const actionBusy = pendingAction !== null;
+
+  const selectedPipeline = useMemo(
+    () => pipelineOptions.find((pipeline) => pipeline.id === dealsPipelineId),
+    [pipelineOptions, dealsPipelineId]
+  );
+
+  const stageMappingGroups = useMemo(() => {
+    const groups = new Map<string, typeof DEAL_STAGE_MAPPING_CATALOG>();
+    for (const entry of DEAL_STAGE_MAPPING_CATALOG) {
+      const list = groups.get(entry.group) ?? [];
+      list.push(entry);
+      groups.set(entry.group, list);
+    }
+    return groups;
+  }, []);
+
+  function setStageMapping(key: DealStageMappingKey, stageId: string) {
+    setDealStageMappings((prev) => {
+      const next = { ...prev };
+      if (stageId) next[key] = stageId;
+      else delete next[key];
+      return next;
+    });
+  }
 
   useEffect(() => {
     fetch(`/api/tenants/${tenantId}/settings`)
@@ -112,6 +145,7 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
             d.settings.assoc_purchase_to_contract ?? false
           );
           setDealsPipelineId(d.settings.deals_pipeline_id ?? "");
+          setDealStageMappings(d.settings.deal_stage_mappings ?? {});
         }
         if (d.mindbody?.siteId) setSiteId(String(d.mindbody.siteId));
         if (d.mindbody?.staffUsername) setStaffUsername(d.mindbody.staffUsername);
@@ -228,6 +262,7 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
             assocLineItemToDeal,
             assocPurchaseToContract,
             dealsPipelineId: dealsPipelineId.trim() || null,
+            dealStageMappings,
           },
         }),
       });
@@ -502,9 +537,9 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
               ))}
             </select>
             <span className="mt-1 block text-xs text-slate-500">
-              Synced deals land in this pipeline with a stage from Mindbody
-              status (e.g. Attended, Scheduled, Active). Gritcity uses a
-              dedicated pipeline with matching stage labels.
+              Choose the HubSpot pipeline for synced deals, then map each Mindbody
+              status below to a stage in that pipeline. Unmapped statuses leave
+              the deal stage unchanged during sync.
             </span>
             {pipelinesLoading ? (
               <span className="mt-1 block text-xs text-slate-500">
@@ -516,16 +551,62 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
                 {pipelinesError}
               </span>
             ) : null}
-            {dealsPipelineId && pipelineOptions.length > 0 ? (
-              <span className="mt-1 block text-xs text-slate-500">
-                Stages in this pipeline:{" "}
-                {pipelineOptions
-                  .find((pipeline) => pipeline.id === dealsPipelineId)
-                  ?.stages.map((stage) => stage.label)
-                  .join(", ") || "none"}
-              </span>
-            ) : null}
           </label>
+
+          {dealsPipelineId && selectedPipeline ? (
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-medium text-slate-900">
+                Pipeline stage mapping
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                Map Mindbody deal types to stages in{" "}
+                <strong>{selectedPipeline.label}</strong>. Save settings after
+                changing mappings.
+              </p>
+              <div className="mt-4 space-y-4">
+                {[...stageMappingGroups.entries()].map(([group, entries]) => (
+                  <div key={group}>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      {group}
+                    </p>
+                    <div className="mt-2 space-y-3">
+                      {entries.map((entry) => (
+                        <label key={entry.key} className="block text-sm">
+                          <span className="font-medium text-slate-700">
+                            {entry.label}
+                          </span>
+                          <span className="mt-0.5 block text-xs text-slate-500">
+                            {entry.hint}
+                          </span>
+                          <select
+                            value={dealStageMappings[entry.key] ?? ""}
+                            onChange={(e) =>
+                              setStageMapping(
+                                entry.key,
+                                e.target.value
+                              )
+                            }
+                            className="mt-1 w-full max-w-md rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900"
+                          >
+                            <option value="">Not mapped</option>
+                            {selectedPipeline.stages.map((stage) => (
+                              <option key={stage.id} value={stage.id}>
+                                {stage.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : dealsPipelineId ? (
+            <p className="text-xs text-slate-500">
+              Loading stages for the selected pipeline…
+            </p>
+          ) : null}
         </div>
       </Card>
 
