@@ -1,5 +1,6 @@
 import type { SyncSettings } from "@/lib/db/types";
 import { normalizeDealStageMappings } from "@/lib/sync/deal-stage-mappings";
+import { parseCutoffDate } from "@/lib/sync/cutoff";
 
 export type RuntimeEntity =
   | "contact"
@@ -89,6 +90,7 @@ export function normalizeSyncSettings(
       row.purchases_min_amount == null
         ? null
         : Number(row.purchases_min_amount),
+    sync_cutoff_date: parseCutoffDate(row.sync_cutoff_date),
     appointments_enabled: Boolean(row.appointments_enabled ?? false),
     visits_enabled: Boolean(row.visits_enabled ?? false),
     line_items_enabled: Boolean(row.line_items_enabled ?? false),

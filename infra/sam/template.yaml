@@ -1,0 +1,157 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Shared SQS + Lambda worker for Mindbody ↔ HubSpot sync.
+  One queue for all tenants. Each message carries tenantId; workers load
+  that tenant's credentials from Supabase. Do not put secrets in the queue.
+
+Parameters:
+  ResourcePrefix:
+    Type: String
+    Default: hubspot-sync-sbx
+    Description: Name prefix for SQS queues, Lambda, and alarms (sandbox-safe).
+  EnvironmentName:
+    Type: String
+    Default: sandbox
+    AllowedValues:
+      - sandbox
+      - staging
+      - production
+  LambdaTimeoutSeconds:
+    Type: Number
+    Default: 120
+    MinValue: 10
+    MaxValue: 900
+  VisibilityTimeoutSeconds:
+    Type: Number
+    Default: 720
+    MinValue: 30
+    MaxValue: 43200
+    Description: Must be greater than LambdaTimeoutSeconds (AWS recommends ~6x).
+  SupabaseUrl:
+    Type: String
+    Default: ""
+    NoEcho: true
+    Description: NEXT_PUBLIC_SUPABASE_URL — same project the app uses.
+  SupabaseServiceRoleKey:
+    Type: String
+    Default: ""
+    NoEcho: true
+  TokenEncryptionKey:
+    Type: String
+    Default: ""
+    NoEcho: true
+    Description: Must match the app TOKEN_ENCRYPTION_KEY so tenant tokens decrypt.
+  HubspotClientId:
+    Type: String
+    Default: ""
+    NoEcho: true
+  HubspotClientSecret:
+    Type: String
+    Default: ""
+    NoEcho: true
+  AppUrl:
+    Type: String
+    Default: ""
+    Description: NEXT_PUBLIC_APP_URL (optional; used if OAuth helpers run)
+
+Globals:
+  Function:
+    Timeout: !Ref LambdaTimeoutSeconds
+    MemorySize: 1024
+    Runtime: nodejs22.x
+    Architectures:
+      - arm64
+
+Resources:
+  DeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "${ResourcePrefix}-dlq"
+      MessageRetentionPeriod: 1209600
+      Tags:
+        - Key: Project
+          Value: mindbody-hubspot-sync
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  JobQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "${ResourcePrefix}-jobs"
+      VisibilityTimeout: !Ref VisibilityTimeoutSeconds
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt DeadLetterQueue.Arn
+        maxReceiveCount: 3
+      Tags:
+        - Key: Project
+          Value: mindbody-hubspot-sync
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  WorkerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${ResourcePrefix}-worker"
+      Description: Tenant-aware sync worker; loads creds from Supabase by tenantId
+      CodeUri: ../..
+      Handler: infra/sam/src/handler.handler
+      Events:
+        JobQueueEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt JobQueue.Arn
+            BatchSize: 1
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
+      Environment:
+        Variables:
+          ENVIRONMENT_NAME: !Ref EnvironmentName
+          NEXT_PUBLIC_SUPABASE_URL: !Ref SupabaseUrl
+          SUPABASE_SERVICE_ROLE_KEY: !Ref SupabaseServiceRoleKey
+          TOKEN_ENCRYPTION_KEY: !Ref TokenEncryptionKey
+          HUBSPOT_CLIENT_ID: !Ref HubspotClientId
+          HUBSPOT_CLIENT_SECRET: !Ref HubspotClientSecret
+          NEXT_PUBLIC_APP_URL: !Ref AppUrl
+      Tags:
+        Project: mindbody-hubspot-sync
+        Environment: !Ref EnvironmentName
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2022
+        Sourcemap: false
+        EntryPoints:
+          - infra/sam/src/handler.ts
+        Tsconfig: tsconfig.json
+
+  DlqDepthAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${ResourcePrefix}-dlq-depth"
+      AlarmDescription: Poison messages landed on the DLQ and need replay/investigation
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt DeadLetterQueue.QueueName
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+Outputs:
+  JobQueueUrl:
+    Description: Set SQS_QUEUE_URL on Vercel when Chunk 2 wires SendMessage
+    Value: !Ref JobQueue
+  JobQueueArn:
+    Value: !GetAtt JobQueue.Arn
+  DeadLetterQueueUrl:
+    Value: !Ref DeadLetterQueue
+  WorkerFunctionArn:
+    Value: !GetAtt WorkerFunction.Arn
+  WorkerFunctionName:
+    Value: !Ref WorkerFunction

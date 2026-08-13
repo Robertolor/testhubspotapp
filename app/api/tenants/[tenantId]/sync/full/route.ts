@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
-import { dispatchBackfill } from "@/lib/inngest/dispatch";
+import { dispatchBackfill } from "@/lib/queue/dispatch";
 import type { EntityType } from "@/lib/db/types";
 
 export async function POST(

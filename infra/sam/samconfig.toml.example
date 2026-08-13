@@ -1,0 +1,17 @@
+version = 0.1
+
+[default.global.parameters]
+stack_name = "hubspot-sync-sbx"
+
+[default.build.parameters]
+cached = true
+parallel = true
+
+[default.deploy.parameters]
+capabilities = "CAPABILITY_IAM"
+confirm_changeset = true
+resolve_s3 = true
+parameter_overrides = "ResourcePrefix=hubspot-sync-sbx EnvironmentName=sandbox"
+
+# After first `sam deploy --guided`, copy the generated samconfig.toml values
+# (region, profile) here locally. Do not commit account-specific secrets.

@@ -5,7 +5,7 @@ import {
   verifyHubspotWebhookV1,
   verifyHubspotWebhookV3,
 } from "@/lib/hubspot/webhook-verify";
-import { dispatchProcessWebhook } from "@/lib/inngest/dispatch";
+import { dispatchProcessWebhook } from "@/lib/queue/dispatch";
 
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();

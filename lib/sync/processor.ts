@@ -16,6 +16,7 @@ import {
 import { ensureHubspotPropertiesForTenant } from "@/lib/sync/ensure-hubspot-properties";
 import type { SyncSettings } from "@/lib/db/types";
 import { normalizeSyncSettings, purchaseQualifiesForSync } from "@/lib/sync/runtime-rules";
+import { recordOnOrAfterCutoff } from "@/lib/sync/cutoff";
 import type { SyncDealResult } from "@/lib/sync/deals";
 
 async function logDealSyncWarnings(
@@ -375,6 +376,14 @@ export async function runBackfill(
         limit
       );
       for (const c of clients) {
+        if (
+          !recordOnOrAfterCutoff(
+            settings.sync_cutoff_date,
+            c.CreationDate ?? c.LastModifiedDateTime
+          )
+        ) {
+          continue;
+        }
         try {
           await syncContactMindbodyToHubspot(
             tenantId,

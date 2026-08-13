@@ -26,6 +26,12 @@ import {
 } from "@/lib/sync/runs";
 import { normalizeSyncSettings } from "@/lib/sync/runtime-rules";
 import { TestSyncLogger } from "@/lib/sync/test-logger";
+import {
+  extractMindbodyRecordDate,
+  recordOnOrAfterCutoff,
+  todayIsoDate,
+  windowStartDate,
+} from "@/lib/sync/cutoff";
 
 /** TEMP: sandbox E2E cap — remove or gate behind env before production */
 export const TEST_SYNC_RECORD_LIMIT = 20;
@@ -46,12 +52,6 @@ type TestDealBudget = {
   appointmentMax: number;
   visitMax: number;
 };
-
-function isoDateDaysAgo(days: number): string {
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  return date.toISOString().slice(0, 10);
-}
 
 /** Reserve slots so enabled optional types are not crowded out by sales/contracts. */
 function computeTestDealBudget(
@@ -129,18 +129,33 @@ async function loadTestDealItems(
   const items: DealTestItem[] = [];
   const budget = computeTestDealBudget(limit, settings);
 
-  log.step("loadTestDealItems.start", { limit, budget });
+  log.step("loadTestDealItems.start", {
+    limit,
+    budget,
+    cutoff: settings.sync_cutoff_date,
+  });
 
   const sales = await listMindbodySales(
     mindbodyAccount,
     0,
-    Math.min(limit, budget.coreMax)
+    Math.min(limit, budget.coreMax),
+    settings.sync_cutoff_date
+      ? { startSaleDateTime: settings.sync_cutoff_date }
+      : undefined
   );
   log.step("listMindbodySales.done", { returned: sales.length });
 
   for (const sale of sales) {
     const payload = normalizeSalePayload(sale as Record<string, unknown>);
     if (!payload.saleId) continue;
+    if (
+      !recordOnOrAfterCutoff(
+        settings.sync_cutoff_date,
+        extractMindbodyRecordDate(sale as Record<string, unknown>)
+      )
+    ) {
+      continue;
+    }
     items.push({ kind: "sale", payload });
     if (items.length >= budget.coreMax) break;
   }
@@ -168,14 +183,25 @@ async function loadTestDealItems(
         client.Id
       );
       if (!payload.clientContractId) continue;
+      if (
+        !recordOnOrAfterCutoff(
+          settings.sync_cutoff_date,
+          payload.contractStartDateTime
+        )
+      ) {
+        continue;
+      }
       items.push({ kind: "contract", payload });
       if (items.length >= budget.coreMax) break;
     }
   }
 
   if (settings.appointments_enabled && budget.appointmentMax > 0) {
-    const startDate = isoDateDaysAgo(APPOINTMENT_LOOKBACK_DAYS);
-    const endDate = isoDateDaysAgo(0);
+    const startDate = windowStartDate(
+      APPOINTMENT_LOOKBACK_DAYS,
+      settings.sync_cutoff_date
+    );
+    const endDate = todayIsoDate();
     const appointmentSlots = Math.min(
       budget.appointmentMax,
       limit - items.length
@@ -208,8 +234,11 @@ async function loadTestDealItems(
   }
 
   if (settings.visits_enabled && budget.visitMax > 0) {
-    const startDate = isoDateDaysAgo(VISIT_LOOKBACK_DAYS);
-    const endDate = isoDateDaysAgo(0);
+    const startDate = windowStartDate(
+      VISIT_LOOKBACK_DAYS,
+      settings.sync_cutoff_date
+    );
+    const endDate = todayIsoDate();
     const visitSlots = Math.min(budget.visitMax, limit - items.length);
 
     log.step("listMindbodyClientVisits.start", {
@@ -354,6 +383,14 @@ export async function runTestSync(
           0,
           TEST_SYNC_RECORD_LIMIT
         );
+        if (settings.sync_cutoff_date) {
+          clients = clients.filter((client) =>
+            recordOnOrAfterCutoff(
+              settings.sync_cutoff_date,
+              client.CreationDate ?? client.LastModifiedDateTime
+            )
+          );
+        }
       } catch (e) {
         await log.fail("listMindbodyClients", e);
         await finishRun("failed", 0, 1);

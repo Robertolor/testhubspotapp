@@ -104,6 +104,7 @@ export async function PUT(
       dealsEnabled?: boolean;
       dealsDirection?: string;
       purchasesMinAmount?: number | null;
+      syncCutoffDate?: string | null;
       appointmentsEnabled?: boolean;
       visitsEnabled?: boolean;
       lineItemsEnabled?: boolean;
@@ -142,6 +143,19 @@ export async function PUT(
     }
     if (body.sync.purchasesMinAmount !== undefined) {
       syncUpdate.purchases_min_amount = body.sync.purchasesMinAmount;
+    }
+    if (body.sync.syncCutoffDate !== undefined) {
+      const raw = body.sync.syncCutoffDate?.trim() ?? "";
+      if (!raw) {
+        syncUpdate.sync_cutoff_date = null;
+      } else if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+        return NextResponse.json(
+          { error: "Cutoff date must be YYYY-MM-DD" },
+          { status: 400 }
+        );
+      } else {
+        syncUpdate.sync_cutoff_date = raw;
+      }
     }
     if (body.sync.appointmentsEnabled !== undefined) {
       syncUpdate.appointments_enabled = body.sync.appointmentsEnabled;

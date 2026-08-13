@@ -69,6 +69,8 @@ export interface SyncSettings {
   hubspot_properties_bootstrapped: boolean;
   /** Skip purchase/sale deals at or below this amount. null = no filter. */
   purchases_min_amount: number | null;
+  /** Inclusive YYYY-MM-DD; skip older Mindbody history on test/backfill. null = no cutoff. */
+  sync_cutoff_date: string | null;
   appointments_enabled: boolean;
   visits_enabled: boolean;
   line_items_enabled: boolean;

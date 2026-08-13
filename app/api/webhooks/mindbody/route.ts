@@ -4,7 +4,7 @@ import { decryptSecret } from "@/lib/crypto/secrets";
 import { getSupabase } from "@/lib/db/client";
 import { getMindbodyAccountBySite } from "@/lib/mindbody/client";
 import { verifyMindbodyWebhook } from "@/lib/mindbody/webhook-verify";
-import { dispatchProcessWebhook } from "@/lib/inngest/dispatch";
+import { dispatchProcessWebhook } from "@/lib/queue/dispatch";
 
 export async function HEAD() {
   return new NextResponse(null, { status: 200 });

@@ -11,9 +11,12 @@
     "validate:mapping": "npx --yes tsx lib/mapping/validate.self-check.ts",
     "validate:transform": "npx --yes tsx lib/mapping/transform.self-check.ts",
     "validate:runtime": "npx --yes tsx lib/sync/runtime-rules.self-check.ts",
+    "validate:cutoff": "npx --yes tsx lib/sync/cutoff.self-check.ts",
+    "validate:queue": "npx --yes tsx lib/queue/message.self-check.ts",
     "mindbody:webhook-test": "npx --yes tsx scripts/trigger-mindbody-webhook.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-sqs": "^3.1109.0",
     "@supabase/supabase-js": "^2.106.2",
     "@vercel/functions": "^3.7.1",
     "class-variance-authority": "^0.7.1",
@@ -31,6 +34,7 @@
     "@types/node": "^20.19.41",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "esbuild": "^0.25.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",

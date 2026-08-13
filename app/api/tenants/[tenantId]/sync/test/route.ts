@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runInBackground } from "@/lib/background";
 import { getSession } from "@/lib/auth/session";
-import { dispatchTestSync } from "@/lib/inngest/dispatch";
+import { dispatchTestSync } from "@/lib/queue/dispatch";
 import { TEST_SYNC_RECORD_LIMIT } from "@/lib/sync/test-sync";
 import type { EntityType } from "@/lib/db/types";
 

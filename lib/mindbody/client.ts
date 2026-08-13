@@ -13,6 +13,7 @@ export interface MindbodyClientRecord {
   MobilePhone?: string;
   HomePhone?: string;
   LastModifiedDateTime?: string;
+  CreationDate?: string;
 }
 
 export async function getMindbodyAccountByTenant(
@@ -236,16 +237,21 @@ export async function fetchClientContracts(
 export async function listMindbodySales(
   account: MindbodyAccount,
   offset: number,
-  limit: number
+  limit: number,
+  options?: { startSaleDateTime?: string }
 ): Promise<Record<string, unknown>[]> {
+  const query: Record<string, string> = {
+    Limit: String(limit),
+    Offset: String(offset),
+  };
+  if (options?.startSaleDateTime) {
+    query.StartSaleDateTime = options.startSaleDateTime;
+  }
   const res = await mindbodyRequestForAccount(
     account,
     "GET",
     "/sale/sales",
-    {
-      Limit: String(limit),
-      Offset: String(offset),
-    }
+    query
   );
   if (!res.ok) {
     throw new Error(`Mindbody list sales failed: ${await res.text()}`);

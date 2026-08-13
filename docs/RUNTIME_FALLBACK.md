@@ -18,6 +18,7 @@ Per-tenant toggles in **Settings → Runtime sync controls**:
 | Control | Default | Effect |
 |---------|---------|--------|
 | Min purchase amount | empty (no filter) | Skips sale/purchase deals at or below threshold |
+| Sync cutoff date | empty (no cutoff) | Test sync / backfill skip Mindbody records before this date (inclusive). Reduces API usage. |
 | Appointments / Visits / Line items | off | Appointments + visits: sync via test/deal path when on. Line items: sync on qualifying sales when on |
 | Link deals to contacts | on | Matches current `createDeal` association behavior |
 | Default deal pipeline | empty | When set, synced deals get pipeline + stage from Mindbody status |

@@ -15,6 +15,7 @@ function baseSettings(overrides: Partial<SyncSettings> = {}): SyncSettings {
     deals_direction: "mb_to_hs",
     hubspot_properties_bootstrapped: true,
     purchases_min_amount: null,
+    sync_cutoff_date: null,
     appointments_enabled: false,
     visits_enabled: false,
     line_items_enabled: false,
@@ -73,6 +74,7 @@ export function runRuntimeRulesSelfCheck(): void {
   });
   assert(normalized.assoc_deal_to_contact === true, "normalize defaults assoc");
   assert(normalized.appointments_enabled === false, "normalize defaults entity");
+  assert(normalized.sync_cutoff_date === null, "normalize defaults cutoff");
 }
 
 if (require.main === module) {

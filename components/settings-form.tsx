@@ -27,6 +27,7 @@ interface SettingsData {
     deals_enabled: boolean;
     deals_direction: SyncDirection;
     purchases_min_amount?: number | null;
+    sync_cutoff_date?: string | null;
     appointments_enabled?: boolean;
     visits_enabled?: boolean;
     line_items_enabled?: boolean;
@@ -74,6 +75,7 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
   const [dealsDirection, setDealsDirection] =
     useState<SyncDirection>("mb_to_hs");
   const [purchasesMinAmount, setPurchasesMinAmount] = useState("");
+  const [syncCutoffDate, setSyncCutoffDate] = useState("");
   const [appointmentsEnabled, setAppointmentsEnabled] = useState(false);
   const [visitsEnabled, setVisitsEnabled] = useState(false);
   const [lineItemsEnabled, setLineItemsEnabled] = useState(false);
@@ -136,6 +138,7 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
               ? String(d.settings.purchases_min_amount)
               : ""
           );
+          setSyncCutoffDate(d.settings.sync_cutoff_date ?? "");
           setAppointmentsEnabled(d.settings.appointments_enabled ?? false);
           setVisitsEnabled(d.settings.visits_enabled ?? false);
           setLineItemsEnabled(d.settings.line_items_enabled ?? false);
@@ -255,6 +258,7 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
             dealsEnabled,
             dealsDirection,
             purchasesMinAmount: parsedMin,
+            syncCutoffDate: syncCutoffDate.trim() || null,
             appointmentsEnabled,
             visitsEnabled,
             lineItemsEnabled,
@@ -633,6 +637,22 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
             <span className="mt-1 block text-xs text-slate-500">
               Purchases at or below this amount are skipped. Leave empty to
               sync all purchases (Gritcity uses 25).
+            </span>
+          </label>
+
+          <label className="block text-sm sm:max-w-xs">
+            <span className="font-medium text-slate-700">
+              Sync cutoff date
+            </span>
+            <input
+              type="date"
+              value={syncCutoffDate}
+              onChange={(e) => setSyncCutoffDate(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900"
+            />
+            <span className="mt-1 block text-xs text-slate-500">
+              Test sync and backfill only include Mindbody records on or after
+              this date. Leave empty for no cutoff (uses more Mindbody API).
             </span>
           </label>
 
