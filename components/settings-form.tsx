@@ -13,7 +13,8 @@ import type { DealStageMappings } from "@/lib/db/types";
 type SyncDirection = "mb_to_hs" | "hs_to_mb" | "bidirectional";
 
 type PendingAction =
-  | "save"
+  | "saveCredentials"
+  | "saveSync"
   | "testContact"
   | "testDeal"
   | "backfillContact"
@@ -58,8 +59,36 @@ function isErrorMessage(text: string): boolean {
   return (
     lower.includes("fail") ||
     lower.includes("error") ||
-    lower.includes("required")
+    lower.includes("required") ||
+    lower.includes("invalid") ||
+    lower.includes("denied")
   );
+}
+
+function formatUserFacingError(text: string): string {
+  const trimmed = text.trim();
+  try {
+    const parsed = JSON.parse(trimmed) as {
+      Error?: { Message?: string };
+      error?: string;
+      message?: string;
+    };
+    const message =
+      parsed.Error?.Message ?? parsed.error ?? parsed.message ?? trimmed;
+    return humanizeMindbodyMessage(message);
+  } catch {
+    return humanizeMindbodyMessage(trimmed);
+  }
+}
+
+function humanizeMindbodyMessage(message: string): string {
+  if (/invalid api key/i.test(message)) {
+    return "Mindbody rejected the API key. Check the key and try again.";
+  }
+  if (/deniedaccess/i.test(message)) {
+    return "Mindbody denied access. Check the Site ID, API key, and staff login.";
+  }
+  return message;
 }
 
 export function SettingsForm({ tenantId }: { tenantId: string }) {
@@ -92,12 +121,21 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
   const [pipelinesLoading, setPipelinesLoading] = useState(false);
   const [pipelinesError, setPipelinesError] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
-  const [saveSucceeded, setSaveSucceeded] = useState(false);
+  const [credentialsSaveSucceeded, setCredentialsSaveSucceeded] = useState(false);
+  const [syncSaveSucceeded, setSyncSaveSucceeded] = useState(false);
   const [mindbodyFeedback, setMindbodyFeedback] = useState<string | null>(null);
+  const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
   const [testSyncFeedback, setTestSyncFeedback] = useState<string | null>(null);
   const [backfillFeedback, setBackfillFeedback] = useState<string | null>(null);
+  const [editingCredentials, setEditingCredentials] = useState(false);
 
   const actionBusy = pendingAction !== null;
+  const mindbodyReady = Boolean(
+    data?.mindbody?.configured &&
+      data.mindbody.staffConfigured &&
+      data.mindbody.staffPasswordConfigured
+  );
+  const showCredentialForm = !mindbodyReady || editingCredentials;
 
   const selectedPipeline = useMemo(
     () => pipelineOptions.find((pipeline) => pipeline.id === dealsPipelineId),
@@ -197,107 +235,146 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
   }, [tenantId, data?.hubspot]);
 
   useEffect(() => {
-    if (!saveSucceeded) return;
-    const timer = window.setTimeout(() => setSaveSucceeded(false), 2000);
+    if (!credentialsSaveSucceeded) return;
+    const timer = window.setTimeout(
+      () => setCredentialsSaveSucceeded(false),
+      2000
+    );
     return () => window.clearTimeout(timer);
-  }, [saveSucceeded]);
+  }, [credentialsSaveSucceeded]);
 
-  async function save() {
-    setPendingAction("save");
+  useEffect(() => {
+    if (!syncSaveSucceeded) return;
+    const timer = window.setTimeout(() => setSyncSaveSucceeded(false), 2000);
+    return () => window.clearTimeout(timer);
+  }, [syncSaveSucceeded]);
+
+  async function putSettings(body: unknown): Promise<void> {
+    const res = await fetch(`/api/tenants/${tenantId}/settings`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const text = await res.text();
+    let json: { error?: string; ok?: boolean } = {};
+    if (text) {
+      try {
+        json = JSON.parse(text) as { error?: string; ok?: boolean };
+      } catch {
+        throw new Error(
+          res.ok
+            ? "Unexpected server response"
+            : `Server error (${res.status})`
+        );
+      }
+    } else if (!res.ok) {
+      throw new Error(`Server error (${res.status})`);
+    }
+    if (!res.ok) throw new Error(json.error ?? "Save failed");
+  }
+
+  async function refreshSettings(): Promise<void> {
+    const refreshed = await fetch(`/api/tenants/${tenantId}/settings`).then(
+      (r) => r.json() as Promise<SettingsData>
+    );
+    setData(refreshed);
+    if (refreshed.mindbody?.siteId) {
+      setSiteId(String(refreshed.mindbody.siteId));
+    }
+    if (refreshed.mindbody?.staffUsername) {
+      setStaffUsername(refreshed.mindbody.staffUsername);
+    }
+  }
+
+  async function saveCredentials() {
+    setPendingAction("saveCredentials");
     setMindbodyFeedback(null);
-    setSaveSucceeded(false);
+    setCredentialsSaveSucceeded(false);
     try {
-      const savedStaffUsername = data?.mindbody?.staffUsername ?? "";
-      const savedSiteId = data?.mindbody?.siteId
-        ? String(data.mindbody.siteId)
-        : "";
-      const mindbodyCredentialsTouched =
-        Boolean(apiKey) ||
-        Boolean(staffPassword) ||
-        staffUsername !== savedStaffUsername ||
-        siteId !== savedSiteId;
+      if (!siteId.trim()) {
+        throw new Error("Enter a Mindbody Site ID.");
+      }
       const needsMindbodySetup =
         !data?.mindbody?.staffPasswordConfigured ||
         !data?.mindbody?.staffConfigured;
-
       if (
-        siteId &&
         needsMindbodySetup &&
         (!staffUsername.trim() || !staffPassword.trim())
       ) {
         throw new Error(
-          "Enter staff username and password, then Save settings."
+          "Enter staff username and password, then save credentials."
         );
       }
+      if (needsMindbodySetup && !apiKey.trim() && !data?.mindbody?.configured) {
+        throw new Error("Paste the Mindbody API key, then save credentials.");
+      }
 
+      await putSettings({
+        mindbody: {
+          siteId: Number(siteId),
+          ...(apiKey.trim() ? { apiKey: apiKey.trim() } : {}),
+          ...(staffUsername.trim() ? { staffUsername: staffUsername.trim() } : {}),
+          ...(staffPassword.trim() ? { staffPassword: staffPassword.trim() } : {}),
+        },
+      });
+
+      setCredentialsSaveSucceeded(true);
+      setMindbodyFeedback("Mindbody credentials saved.");
+      setApiKey("");
+      setStaffPassword("");
+      setEditingCredentials(false);
+      await refreshSettings();
+    } catch (e) {
+      setMindbodyFeedback(
+        formatUserFacingError(e instanceof Error ? e.message : "Save failed")
+      );
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function saveSyncSettings() {
+    setPendingAction("saveSync");
+    setSyncFeedback(null);
+    setSyncSaveSucceeded(false);
+    try {
       const trimmedMin = purchasesMinAmount.trim();
       let parsedMin: number | null = null;
       if (trimmedMin) {
         parsedMin = Number(trimmedMin);
         if (!Number.isFinite(parsedMin) || parsedMin < 0) {
-          throw new Error("Minimum purchase amount must be a non-negative number.");
-        }
-      }
-
-      const res = await fetch(`/api/tenants/${tenantId}/settings`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mindbody:
-            siteId && (mindbodyCredentialsTouched || needsMindbodySetup)
-              ? {
-                  siteId: Number(siteId),
-                  ...(apiKey ? { apiKey } : {}),
-                  ...(staffUsername ? { staffUsername } : {}),
-                  ...(staffPassword ? { staffPassword } : {}),
-                }
-              : undefined,
-          sync: {
-            contactsEnabled,
-            contactsDirection,
-            dealsEnabled,
-            dealsDirection,
-            purchasesMinAmount: parsedMin,
-            syncCutoffDate: syncCutoffDate.trim() || null,
-            appointmentsEnabled,
-            visitsEnabled,
-            lineItemsEnabled,
-            assocDealToContact,
-            assocLineItemToDeal,
-            assocPurchaseToContract,
-            dealsPipelineId: dealsPipelineId.trim() || null,
-            dealStageMappings,
-          },
-        }),
-      });
-      const text = await res.text();
-      let json: { error?: string; ok?: boolean } = {};
-      if (text) {
-        try {
-          json = JSON.parse(text) as { error?: string; ok?: boolean };
-        } catch {
           throw new Error(
-            res.ok
-              ? "Unexpected server response"
-              : `Server error (${res.status})`
+            "Minimum purchase amount must be a non-negative number."
           );
         }
-      } else if (!res.ok) {
-        throw new Error(`Server error (${res.status})`);
       }
-      if (!res.ok) throw new Error(json.error ?? "Save failed");
 
-      setSaveSucceeded(true);
-      setMindbodyFeedback("Settings saved.");
-      setApiKey("");
-      setStaffPassword("");
-      const refreshed = await fetch(`/api/tenants/${tenantId}/settings`).then(
-        (r) => r.json() as Promise<SettingsData>
-      );
-      setData(refreshed);
+      await putSettings({
+        sync: {
+          contactsEnabled,
+          contactsDirection,
+          dealsEnabled,
+          dealsDirection,
+          purchasesMinAmount: parsedMin,
+          syncCutoffDate: syncCutoffDate.trim() || null,
+          appointmentsEnabled,
+          visitsEnabled,
+          lineItemsEnabled,
+          assocDealToContact,
+          assocLineItemToDeal,
+          assocPurchaseToContract,
+          dealsPipelineId: dealsPipelineId.trim() || null,
+          dealStageMappings,
+        },
+      });
+
+      setSyncSaveSucceeded(true);
+      setSyncFeedback("Sync settings saved.");
+      await refreshSettings();
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Save failed";
-      setMindbodyFeedback(message);
+      setSyncFeedback(
+        formatUserFacingError(e instanceof Error ? e.message : "Save failed")
+      );
     } finally {
       setPendingAction(null);
     }
@@ -386,116 +463,190 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
         <Card>
           <CardTitle>HubSpot</CardTitle>
           <p className="mt-2 text-sm text-slate-600">
-            Portal {data.hubspot.portalId}
+            Connected · Portal {data.hubspot.portalId}
             {data.hubspot.hubDomain ? ` · ${data.hubspot.hubDomain}` : ""}
           </p>
         </Card>
       )}
 
       <Card>
-        <CardTitle>Mindbody credentials</CardTitle>
-        <p className="mt-1 text-sm text-slate-500">
-          Each business provides their Site ID, API key, and a staff login with
-          API access permission.
-        </p>
-        {data?.mindbody?.configured ? (
-          <div
-            className={`mt-3 rounded-lg border px-4 py-3 text-sm ${
-              data.mindbody.staffPasswordConfigured &&
-              data.mindbody.staffConfigured
-                ? "border-teal-200 bg-teal-50 text-teal-900"
-                : "border-amber-200 bg-amber-50 text-amber-950"
-            }`}
-          >
-            <p className="font-medium">
-              {data.mindbody.staffPasswordConfigured &&
-              data.mindbody.staffConfigured
-                ? "Mindbody credentials saved"
-                : "Mindbody staff login incomplete"}
+        <CardTitle>Mindbody</CardTitle>
+        {mindbodyReady && !showCredentialForm ? (
+          <>
+            <p className="mt-2 text-sm text-slate-600">
+              Connected · Site {data?.mindbody?.siteId}
+              {data?.mindbody?.staffUsername
+                ? ` · ${data.mindbody.staffUsername}`
+                : ""}
             </p>
-            <ul className="mt-2 space-y-1 text-xs">
-              <li>Site ID and API key — saved</li>
-              <li>
-                Staff username —{" "}
-                {data.mindbody.staffConfigured
-                  ? data.mindbody.staffUsername
-                  : "not saved (required)"}
-              </li>
-              <li>
-                Staff password —{" "}
-                {data.mindbody.staffPasswordConfigured
-                  ? "saved (hidden). Leave blank unless changing it."
-                  : "not saved (required)"}
-              </li>
-            </ul>
-          </div>
-        ) : null}
-        {mindbodyFeedback ? (
+            {mindbodyFeedback ? (
+              <ActionFeedback
+                type={isErrorMessage(mindbodyFeedback) ? "error" : "success"}
+                className="mt-3"
+              >
+                {mindbodyFeedback}
+              </ActionFeedback>
+            ) : null}
+            <div className="mt-4">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setMindbodyFeedback(null);
+                  setEditingCredentials(true);
+                }}
+                disabled={actionBusy}
+              >
+                Update credentials
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="mt-1 text-sm text-slate-500">
+              {mindbodyReady
+                ? "Update the Site ID, API key, or staff login. Leave API key and password blank to keep the saved values."
+                : "Each business provides their Site ID, API key, and a staff login with API access permission."}
+            </p>
+            {data?.mindbody?.configured && !mindbodyReady ? (
+              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                <p className="font-medium">Mindbody staff login incomplete</p>
+                <p className="mt-1 text-xs">
+                  Site ID and API key are saved. Add the staff username and
+                  password to finish setup.
+                </p>
+              </div>
+            ) : null}
+            {mindbodyFeedback ? (
+              <ActionFeedback
+                type={isErrorMessage(mindbodyFeedback) ? "error" : "success"}
+                className="mt-3"
+              >
+                {mindbodyFeedback}
+              </ActionFeedback>
+            ) : null}
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <label className="block text-sm">
+                <span className="font-medium text-slate-700">Site ID</span>
+                <input
+                  type="number"
+                  value={siteId}
+                  onChange={(e) => setSiteId(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400"
+                  placeholder="e.g. 12345 or -99 for sandbox"
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="font-medium text-slate-700">API key</span>
+                <input
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  autoComplete="new-password"
+                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400"
+                  placeholder={
+                    data?.mindbody?.configured ? "Leave blank to keep" : "Paste API key"
+                  }
+                />
+              </label>
+              <label className="block text-sm sm:col-span-2">
+                <span className="font-medium text-slate-700">
+                  Staff username (email)
+                </span>
+                <input
+                  type="email"
+                  value={staffUsername}
+                  onChange={(e) => setStaffUsername(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400"
+                  placeholder="Staff account with API permission"
+                />
+              </label>
+              <label className="block text-sm sm:col-span-2">
+                <span className="font-medium text-slate-700">Staff password</span>
+                <input
+                  type="password"
+                  value={staffPassword}
+                  onChange={(e) => setStaffPassword(e.target.value)}
+                  autoComplete="new-password"
+                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400"
+                  placeholder={
+                    data?.mindbody?.staffPasswordConfigured
+                      ? "Leave blank to keep"
+                      : "Staff account password"
+                  }
+                />
+              </label>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Button
+                onClick={saveCredentials}
+                loading={pendingAction === "saveCredentials"}
+                success={credentialsSaveSucceeded}
+                disabled={actionBusy && pendingAction !== "saveCredentials"}
+              >
+                {pendingAction === "saveCredentials"
+                  ? "Saving…"
+                  : "Save credentials"}
+              </Button>
+              {mindbodyReady ? (
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setEditingCredentials(false);
+                    setApiKey("");
+                    setStaffPassword("");
+                    setMindbodyFeedback(null);
+                    if (data?.mindbody?.siteId) {
+                      setSiteId(String(data.mindbody.siteId));
+                    }
+                    if (data?.mindbody?.staffUsername) {
+                      setStaffUsername(data.mindbody.staffUsername);
+                    }
+                  }}
+                  disabled={actionBusy}
+                >
+                  Cancel
+                </Button>
+              ) : null}
+            </div>
+          </>
+        )}
+      </Card>
+
+      <Card className="border-amber-200 bg-amber-50/50">
+        <CardTitle>Test sync</CardTitle>
+        <p className="mt-1 text-sm text-slate-600">
+          Syncs at most <strong>20</strong> contacts or deals from Mindbody.
+          Honors the cutoff date in Runtime sync controls after you save it.
+          Check Reports for progress.
+        </p>
+        {testSyncFeedback ? (
           <ActionFeedback
-            type={isErrorMessage(mindbodyFeedback) ? "error" : "success"}
+            type={isErrorMessage(testSyncFeedback) ? "error" : "success"}
             className="mt-3"
           >
-            {mindbodyFeedback}
+            {testSyncFeedback}
           </ActionFeedback>
         ) : null}
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <label className="block text-sm">
-            <span className="font-medium text-slate-700">Site ID</span>
-            <input
-              type="number"
-              value={siteId}
-              onChange={(e) => setSiteId(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400"
-              placeholder="e.g. 12345 or -99 for sandbox"
-            />
-          </label>
-          <label className="block text-sm">
-            <span className="font-medium text-slate-700">API key</span>
-            <input
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400"
-              placeholder={
-                data?.mindbody?.configured ? "••••••••" : "Paste API key"
-              }
-            />
-          </label>
-          <label className="block text-sm sm:col-span-2">
-            <span className="font-medium text-slate-700">
-              Staff username (email)
-            </span>
-            <input
-              type="email"
-              value={staffUsername}
-              onChange={(e) => setStaffUsername(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400"
-              placeholder="Staff account with API permission"
-            />
-          </label>
-          <label className="block text-sm sm:col-span-2">
-            <span className="font-medium text-slate-700">Staff password</span>
-            <input
-              type="password"
-              value={staffPassword}
-              onChange={(e) => setStaffPassword(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400"
-              placeholder={
-                data?.mindbody?.staffConfigured
-                  ? "••••••••"
-                  : "Staff account password"
-              }
-            />
-          </label>
-        </div>
-        <div className="mt-4">
+        <div className="mt-4 flex flex-wrap gap-3">
           <Button
-            onClick={save}
-            loading={pendingAction === "save"}
-            success={saveSucceeded}
-            disabled={actionBusy && pendingAction !== "save"}
+            variant="secondary"
+            onClick={() => runTestSync("contact")}
+            loading={pendingAction === "testContact"}
+            disabled={actionBusy && pendingAction !== "testContact"}
           >
-            {pendingAction === "save" ? "Saving…" : "Save settings"}
+            {pendingAction === "testContact"
+              ? "Starting…"
+              : "Test sync contacts (20)"}
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => runTestSync("deal")}
+            loading={pendingAction === "testDeal"}
+            disabled={actionBusy && pendingAction !== "testDeal"}
+          >
+            {pendingAction === "testDeal"
+              ? "Starting…"
+              : "Test sync deals (20)"}
           </Button>
         </div>
       </Card>
@@ -612,6 +763,24 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
             </p>
           ) : null}
         </div>
+        {syncFeedback ? (
+          <ActionFeedback
+            type={isErrorMessage(syncFeedback) ? "error" : "success"}
+            className="mt-4"
+          >
+            {syncFeedback}
+          </ActionFeedback>
+        ) : null}
+        <div className="mt-4">
+          <Button
+            onClick={saveSyncSettings}
+            loading={pendingAction === "saveSync"}
+            success={syncSaveSucceeded}
+            disabled={actionBusy && pendingAction !== "saveSync"}
+          >
+            {pendingAction === "saveSync" ? "Saving…" : "Save sync direction"}
+          </Button>
+        </div>
       </Card>
 
       <Card>
@@ -714,80 +883,38 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
             </div>
           </div>
         </div>
-        <div className="mt-4">
-          <Button
-            onClick={save}
-            loading={pendingAction === "save"}
-            success={saveSucceeded}
-            disabled={actionBusy && pendingAction !== "save"}
-          >
-            {pendingAction === "save" ? "Saving…" : "Save runtime controls"}
-          </Button>
-        </div>
-      </Card>
-
-      <Card className="border-slate-200 bg-slate-50/80">
-        <CardTitle>Migration fallback</CardTitle>
-        <p className="mt-1 text-sm text-slate-600">
-          During expansion, use the local Mindbody migration CLI for full
-          one-time loads. Keep app sync limited until cutover. Do not run both
-          full syncs on the same HubSpot portal at once.
-        </p>
-        <p className="mt-2 text-xs text-slate-500">
-          Out-of-order webhooks are handled by retrying pending deal-to-contact
-          links when the contact sync lands.
-        </p>
-        <p className="mt-2 text-xs text-slate-500">
-          See <code className="text-xs">docs/RUNTIME_FALLBACK.md</code> for the
-          cutover checklist.
-        </p>
-      </Card>
-
-      <Card className="border-amber-200 bg-amber-50/50">
-        <CardTitle>Sandbox test sync (temporary)</CardTitle>
-        <p className="mt-1 text-sm text-slate-600">
-          Syncs at most <strong>20</strong> contacts or deals from Mindbody for
-          E2E validation. Deal test sync reserves slots for each enabled type
-          (sales/contracts, appointments, visits) so one type does not use the
-          full cap. Visits scan up to 50 clients over the past year. Detailed
-          steps are logged in Reports and Vercel function logs. Use this instead
-          of full backfill on shared sandbox site{" "}
-          <code className="text-xs">-99</code>.
-        </p>
-        {testSyncFeedback ? (
+        {syncFeedback ? (
           <ActionFeedback
-            type={isErrorMessage(testSyncFeedback) ? "error" : "success"}
-            className="mt-3"
+            type={isErrorMessage(syncFeedback) ? "error" : "success"}
+            className="mt-4"
           >
-            {testSyncFeedback}
+            {syncFeedback}
           </ActionFeedback>
         ) : null}
-        <div className="mt-4 flex flex-wrap gap-3">
+        <div className="mt-4">
           <Button
-            variant="secondary"
-            onClick={() => runTestSync("contact")}
-            loading={pendingAction === "testContact"}
-            disabled={actionBusy && pendingAction !== "testContact"}
+            onClick={saveSyncSettings}
+            loading={pendingAction === "saveSync"}
+            success={syncSaveSucceeded}
+            disabled={actionBusy && pendingAction !== "saveSync"}
           >
-            {pendingAction === "testContact"
-              ? "Starting…"
-              : "Test sync contacts (20)"}
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => runTestSync("deal")}
-            loading={pendingAction === "testDeal"}
-            disabled={actionBusy && pendingAction !== "testDeal"}
-          >
-            {pendingAction === "testDeal"
-              ? "Starting…"
-              : "Test sync deals (20)"}
+            {pendingAction === "saveSync"
+              ? "Saving…"
+              : "Save runtime controls"}
           </Button>
         </div>
       </Card>
 
-      <div>
-        <div className="flex flex-wrap gap-3">
+      <details className="rounded-xl border border-slate-200 bg-white p-6">
+        <summary className="cursor-pointer text-sm font-semibold text-slate-900">
+          Advanced: full backfill
+        </summary>
+        <p className="mt-2 text-sm text-slate-600">
+          Pulls all matching Mindbody records. This uses more Mindbody API and
+          should be avoided on sandbox site -99. Prefer Test sync unless you
+          intend a full load.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-3">
           <Button
             variant="secondary"
             onClick={() => runBackfill("contact")}
@@ -809,9 +936,6 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
               : "Full backfill deals"}
           </Button>
         </div>
-        <p className="mt-2 text-xs text-slate-500">
-          Full backfill pulls all records — avoid on Mindbody sandbox.
-        </p>
         {backfillFeedback ? (
           <ActionFeedback
             type={isErrorMessage(backfillFeedback) ? "error" : "success"}
@@ -820,7 +944,7 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
             {backfillFeedback}
           </ActionFeedback>
         ) : null}
-      </div>
+      </details>
     </div>
   );
 }

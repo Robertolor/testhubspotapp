@@ -9,10 +9,7 @@ export default async function SettingsPage() {
     <div>
       <h2 className="text-2xl font-semibold text-slate-900">Settings</h2>
       <p className="mt-1 text-slate-600">
-        Manage Mindbody credentials and sync direction per entity.
-      </p>
-      <p className="mt-1 font-mono text-xs text-slate-400">
-        Tenant {session.tenantId}
+        Sync rules and connection for this HubSpot portal.
       </p>
       <div className="mt-6">
         <SettingsForm tenantId={session.tenantId} />
