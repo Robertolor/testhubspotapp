@@ -29,7 +29,7 @@ export default function TermsPage() {
           <p>
             These Terms of Service (&quot;Terms&quot;) govern your access to and
             use of Mindbody ↔ HubSpot Sync (&quot;the App&quot;), a software
-            integration operated by Method Data (&quot;we,&quot; &quot;us,&quot;
+            integration operated by MethodData (&quot;we,&quot; &quot;us,&quot;
             or &quot;our&quot;). By installing the App, connecting your accounts,
             or using any part of the service, you agree to these Terms and to
             our{" "}

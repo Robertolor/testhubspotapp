@@ -7,7 +7,7 @@ HubSpot marketplace app that syncs **Contacts** and **Deals** between Mindbody a
 - **Frontend:** React 19 (App Router)
 - **Backend:** Next.js API routes (Node.js on Vercel)
 - **Database:** Supabase PostgreSQL
-- **Background jobs:** Inngest (optional; falls back to inline processing in dev)
+- **Background jobs:** AWS SQS + Lambda when `SQS_QUEUE_URL` is set; otherwise inline on Vercel (Inngest scaffold deferred)
 
 ## Quick start
 
@@ -39,11 +39,19 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) and click **Install with HubSpot**.
 
-For background jobs in development:
+## Verify before release
 
 ```bash
-npx inngest-cli@latest dev
+npm run validate:all              # self-checks + typecheck
+npm run verify:infra              # static infra contract
+npm run verify:infra -- --mode env
+npm run verify:infra -- --mode urls
+npm run verify:infra -- --mode aws --profile hubspot-sync-sbx
 ```
+
+See [docs/INFRA_ACCEPTANCE.md](docs/INFRA_ACCEPTANCE.md) for the full acceptance matrix and manual smoke checklist.
+
+CI runs `validate:all`, `lint`, and static infra checks on every push/PR; main also checks public marketplace URLs.
 
 ### 4. Deploy to Vercel
 

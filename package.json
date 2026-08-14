@@ -13,6 +13,10 @@
     "validate:runtime": "npx --yes tsx lib/sync/runtime-rules.self-check.ts",
     "validate:cutoff": "npx --yes tsx lib/sync/cutoff.self-check.ts",
     "validate:queue": "npx --yes tsx lib/queue/message.self-check.ts",
+    "validate:dispatch": "npx --yes tsx lib/queue/dispatch.self-check.ts",
+    "validate:all": "npx --yes tsx scripts/run-validate-all.ts",
+    "verify:infra": "npx --yes tsx scripts/verify-infra.ts --mode static",
+    "verify:infra:all": "npx --yes tsx scripts/verify-infra.ts --mode all",
     "mindbody:webhook-test": "npx --yes tsx scripts/trigger-mindbody-webhook.ts"
   },
   "dependencies": {
