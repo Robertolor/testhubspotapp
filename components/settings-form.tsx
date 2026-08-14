@@ -138,10 +138,15 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
       data.mindbody.staffPasswordConfigured
   );
   const showCredentialForm = !mindbodyReady || editingCredentials;
+  const hubspotConnected = Boolean(data?.hubspot);
+  const pipelineOptionsForUi = useMemo(
+    () => (hubspotConnected ? pipelineOptions : []),
+    [hubspotConnected, pipelineOptions]
+  );
 
   const selectedPipeline = useMemo(
-    () => pipelineOptions.find((pipeline) => pipeline.id === dealsPipelineId),
-    [pipelineOptions, dealsPipelineId]
+    () => pipelineOptionsForUi.find((pipeline) => pipeline.id === dealsPipelineId),
+    [pipelineOptionsForUi, dealsPipelineId]
   );
 
   const stageMappingGroups = useMemo(() => {
@@ -199,45 +204,44 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
   }, [tenantId]);
 
   useEffect(() => {
-    if (!data?.hubspot) {
-      setPipelineOptions([]);
-      setPipelinesError(null);
-      return;
-    }
+    if (!hubspotConnected) return;
 
     let cancelled = false;
-    setPipelinesLoading(true);
-    setPipelinesError(null);
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setPipelinesLoading(true);
+      setPipelinesError(null);
 
-    fetch(`/api/tenants/${tenantId}/hubspot/pipelines`)
-      .then(async (res) => {
-        const json = (await res.json()) as {
-          pipelines?: HubspotPipelineOption[];
-          error?: string;
-        };
-        if (!res.ok) {
-          throw new Error(json.error ?? "Failed to load HubSpot pipelines");
-        }
-        if (!cancelled) {
-          setPipelineOptions(json.pipelines ?? []);
-        }
-      })
-      .catch((e) => {
-        if (!cancelled) {
-          setPipelineOptions([]);
-          setPipelinesError(
-            e instanceof Error ? e.message : "Failed to load HubSpot pipelines"
-          );
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setPipelinesLoading(false);
-      });
+      fetch(`/api/tenants/${tenantId}/hubspot/pipelines`)
+        .then(async (res) => {
+          const json = (await res.json()) as {
+            pipelines?: HubspotPipelineOption[];
+            error?: string;
+          };
+          if (!res.ok) {
+            throw new Error(json.error ?? "Failed to load HubSpot pipelines");
+          }
+          if (!cancelled) {
+            setPipelineOptions(json.pipelines ?? []);
+          }
+        })
+        .catch((e) => {
+          if (!cancelled) {
+            setPipelineOptions([]);
+            setPipelinesError(
+              e instanceof Error ? e.message : "Failed to load HubSpot pipelines"
+            );
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setPipelinesLoading(false);
+        });
+    });
 
     return () => {
       cancelled = true;
     };
-  }, [tenantId, data?.hubspot]);
+  }, [tenantId, hubspotConnected]);
 
   useEffect(() => {
     if (!credentialsSaveSucceeded) return;
@@ -691,7 +695,7 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
                   ? "Use HubSpot’s default pipeline"
                   : "Connect HubSpot to choose a pipeline"}
               </option>
-              {pipelineOptions.map((pipeline) => (
+              {pipelineOptionsForUi.map((pipeline) => (
                 <option key={pipeline.id} value={pipeline.id}>
                   {pipeline.label}
                 </option>

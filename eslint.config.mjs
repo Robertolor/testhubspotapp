@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // SAM esbuild output (not source)
+    "infra/sam/.aws-sam/**",
   ]),
 ]);
 

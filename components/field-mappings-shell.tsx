@@ -184,16 +184,14 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
     return tabs;
   }, [runtimeSettings.appointments_enabled, runtimeSettings.visits_enabled]);
 
-  useEffect(() => {
-    if (!mainTabs.some((tab) => tab.id === entity)) {
-      setEntity(mainTabs[0]?.id ?? "contact");
-    }
+  const resolvedEntity = useMemo((): MappingEntityTab => {
+    if (mainTabs.some((tab) => tab.id === entity)) return entity;
+    return mainTabs[0]?.id ?? "contact";
   }, [entity, mainTabs]);
 
-  useEffect(() => {
-    if (!dealSourceTabs.some((tab) => tab.id === dealSource)) {
-      setDealSource(dealSourceTabs[0]?.id ?? "contract");
-    }
+  const resolvedDealSource = useMemo((): MindbodyMappingSource => {
+    if (dealSourceTabs.some((tab) => tab.id === dealSource)) return dealSource;
+    return dealSourceTabs[0]?.id ?? "contract";
   }, [dealSource, dealSourceTabs]);
 
   const loadData = useCallback(async () => {
@@ -208,9 +206,9 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
     setMindbodySearch("");
 
     const hubspotObject =
-      entity === "contact"
+      resolvedEntity === "contact"
         ? "contacts"
-        : entity === "line_item"
+        : resolvedEntity === "line_item"
           ? "line_items"
           : "deals";
 
@@ -237,11 +235,11 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
     }
 
     const mindbodyEntity =
-      entity === "contact"
+      resolvedEntity === "contact"
         ? "contact"
-        : entity === "line_item"
+        : resolvedEntity === "line_item"
           ? "line_item"
-          : dealSource;
+          : resolvedDealSource;
 
     try {
       const res = await fetch(
@@ -263,9 +261,9 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
 
     try {
       const mappingsUrl =
-        entity === "deal"
-          ? `/api/tenants/${tenantId}/mapping/fields?entity=deal&mindbodySource=${dealSource}`
-          : `/api/tenants/${tenantId}/mapping/fields?entity=${entity}`;
+        resolvedEntity === "deal"
+          ? `/api/tenants/${tenantId}/mapping/fields?entity=deal&mindbodySource=${resolvedDealSource}`
+          : `/api/tenants/${tenantId}/mapping/fields?entity=${resolvedEntity}`;
       const res = await fetch(mappingsUrl);
       const data = (await res.json()) as {
         mappings?: FieldMappingItem[];
@@ -289,10 +287,16 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
     setDraftRows(draft);
     setSavedSnapshot(draft);
     setLoading(false);
-  }, [entity, dealSource, tenantId]);
+  }, [resolvedEntity, resolvedDealSource, tenantId]);
 
   useEffect(() => {
-    void loadData();
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) void loadData();
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [loadData]);
 
   useEffect(() => {
@@ -373,8 +377,10 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          entity,
-          ...(entity === "deal" ? { mindbodySource: dealSource } : {}),
+          entity: resolvedEntity,
+          ...(resolvedEntity === "deal"
+            ? { mindbodySource: resolvedDealSource }
+            : {}),
           mappings: draftRows.map((row) => ({
             hubspotProperty: row.hubspotProperty,
             mindbodyField: row.mindbodyField,
@@ -438,41 +444,41 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
   );
 
   const heading =
-    entity === "contact"
+    resolvedEntity === "contact"
       ? "Contact mappings"
-      : entity === "line_item"
+      : resolvedEntity === "line_item"
         ? "Line item mappings"
-        : `Deal mappings — ${dealSourceLabel(dealSource)}`;
+        : `Deal mappings — ${dealSourceLabel(resolvedDealSource)}`;
 
   const helperText =
-    entity === "contact"
+    resolvedEntity === "contact"
       ? "Use + Add mapping and Remove on non-system rows, then save. Email and Client ID stay locked."
-      : entity === "line_item"
+      : resolvedEntity === "line_item"
         ? "Map Mindbody purchase line item fields to HubSpot line item properties. Sync starts when line items are enabled in Settings."
-        : dealSource === "contract"
+        : resolvedDealSource === "contract"
           ? "Map Mindbody contract fields to HubSpot deal properties. Contract ID stays locked when configured as a system row."
-          : dealSource === "sale"
+          : resolvedDealSource === "sale"
             ? "Map Mindbody sale fields to HubSpot deal properties. Sale ID stays locked when configured as a system row."
-            : `Map Mindbody ${dealSourceLabel(dealSource)} fields to HubSpot deal properties. Sync starts when ${dealSourceLabel(dealSource)} are enabled in Settings.`;
+            : `Map Mindbody ${dealSourceLabel(resolvedDealSource)} fields to HubSpot deal properties. Sync starts when ${dealSourceLabel(resolvedDealSource)} are enabled in Settings.`;
 
   const mindbodyCatalogTitle =
-    entity === "contact"
+    resolvedEntity === "contact"
       ? "Mindbody fields"
-      : entity === "line_item"
+      : resolvedEntity === "line_item"
         ? "Mindbody line item fields"
-        : `Mindbody ${dealSourceLabel(dealSource)} fields`;
+        : `Mindbody ${dealSourceLabel(resolvedDealSource)} fields`;
 
   const mindbodyCatalogDescription =
-    entity === "contact"
+    resolvedEntity === "contact"
       ? "Client fields from your Mindbody site"
-      : entity === "line_item"
+      : resolvedEntity === "line_item"
         ? "Fields from Mindbody purchase line items"
-        : `Fields from Mindbody ${dealSourceLabel(dealSource)}`;
+        : `Fields from Mindbody ${dealSourceLabel(resolvedDealSource)}`;
 
   const hubspotCatalogDescription =
-    entity === "contact"
+    resolvedEntity === "contact"
       ? "Contact properties from your portal"
-      : entity === "line_item"
+      : resolvedEntity === "line_item"
         ? "Line item properties from your portal"
         : "Deal properties from your portal";
 
@@ -506,7 +512,7 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
             onClick={() => setEntity(tab.id)}
             className={cn(
               "flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors",
-              entity === tab.id
+              resolvedEntity === tab.id
                 ? "bg-white text-teal-800 shadow-sm"
                 : "text-slate-600 hover:text-slate-900"
             )}
@@ -516,7 +522,7 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
         ))}
       </div>
 
-      {entity === "deal" ? (
+      {resolvedEntity === "deal" ? (
         <div className="mt-3 flex flex-wrap gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
           {dealSourceTabs.map((tab) => (
             <button
@@ -525,7 +531,7 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
               onClick={() => setDealSource(tab.id)}
               className={cn(
                 "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                dealSource === tab.id
+                resolvedDealSource === tab.id
                   ? "bg-white text-teal-800 shadow-sm"
                   : "text-slate-600 hover:text-slate-900"
               )}
