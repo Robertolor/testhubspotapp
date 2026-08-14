@@ -16,7 +16,7 @@ export default async function HomePage({
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-teal-50 px-6">
+    <div className="flex flex-1 flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-teal-50 px-6 py-12">
       <div className="max-w-lg text-center">
         <p className="text-sm font-semibold uppercase tracking-wide text-teal-700">
           HubSpot Marketplace App
@@ -48,12 +48,6 @@ export default async function HomePage({
           <li>• Webhooks from HubSpot and Mindbody</li>
           <li>• Configurable sync direction for contacts and deals</li>
         </ul>
-
-        <p className="mt-12 text-sm text-slate-500">
-          <Link href="/privacy" className="text-teal-700 hover:underline">
-            Privacy Policy
-          </Link>
-        </p>
       </div>
     </div>
   );

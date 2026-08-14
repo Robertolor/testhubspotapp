@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { getSupportEmail } from "@/lib/support";
 
 export const metadata: Metadata = {
   title: "Privacy Policy · Mindbody ↔ HubSpot Sync",
@@ -7,19 +8,11 @@ export const metadata: Metadata = {
     "Privacy policy for the Mindbody ↔ HubSpot Sync HubSpot marketplace app",
 };
 
-function supportEmail(): string {
-  return (
-    process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim() ||
-    "Set NEXT_PUBLIC_SUPPORT_EMAIL in your deployment environment"
-  );
-}
-
 export default function PrivacyPage() {
-  const email = supportEmail();
-  const emailIsConfigured = Boolean(process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim());
+  const email = getSupportEmail();
 
   return (
-    <div className="min-h-screen bg-slate-50 px-6 py-12">
+    <div className="flex flex-1 bg-slate-50 px-6 py-12">
       <article className="mx-auto max-w-2xl space-y-8 text-slate-700">
         <header className="space-y-2">
           <p className="text-sm font-semibold uppercase tracking-wide text-teal-700">
@@ -132,7 +125,7 @@ export default function PrivacyPage() {
           <h2 className="text-lg font-semibold text-slate-900">Contact</h2>
           <p>
             Privacy and support requests:{" "}
-            {emailIsConfigured ? (
+            {email ? (
               <a
                 className="font-medium text-teal-700 hover:underline"
                 href={`mailto:${email}`}
@@ -140,7 +133,9 @@ export default function PrivacyPage() {
                 {email}
               </a>
             ) : (
-              <span className="font-medium text-slate-900">{email}</span>
+              <span className="font-medium text-slate-900">
+                use the Support link in the site footer after install
+              </span>
             )}
           </p>
         </section>

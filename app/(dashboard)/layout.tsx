@@ -13,7 +13,7 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="flex min-h-0 flex-1 flex-col bg-slate-50">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <div>
@@ -29,7 +29,7 @@ export default async function DashboardLayout({
           </p>
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-6 py-8">
+      <main className="mx-auto flex w-full max-w-5xl flex-1 px-6 py-8">
         <DashboardNav />
         <div className="mt-8">{children}</div>
       </main>
