@@ -16,7 +16,10 @@ import {
 import { ensureHubspotPropertiesForTenant } from "@/lib/sync/ensure-hubspot-properties";
 import type { SyncSettings } from "@/lib/db/types";
 import { normalizeSyncSettings, purchaseQualifiesForSync } from "@/lib/sync/runtime-rules";
-import { recordOnOrAfterCutoff } from "@/lib/sync/cutoff";
+import {
+  advanceSyncCutoffIfEnabled,
+  recordOnOrAfterCutoff,
+} from "@/lib/sync/cutoff";
 import type { SyncDealResult } from "@/lib/sync/deals";
 
 async function logDealSyncWarnings(
@@ -418,6 +421,12 @@ export async function runBackfill(
     processed,
     failed
   );
+
+  const status =
+    failed > 0 ? (processed > 0 ? "partial" : "failed") : "completed";
+  if (status === "completed" || status === "partial") {
+    await advanceSyncCutoffIfEnabled(tenantId, settings);
+  }
 
   return runId;
 }

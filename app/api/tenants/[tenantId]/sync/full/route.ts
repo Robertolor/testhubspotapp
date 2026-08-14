@@ -20,6 +20,6 @@ export async function POST(
 
   return NextResponse.json({
     ok: true,
-    message: `Backfill for ${entityType} queued`,
+    message: `Started a full ${entityType} sync. Check Reports for progress.`,
   });
 }

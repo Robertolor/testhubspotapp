@@ -71,6 +71,8 @@ export interface SyncSettings {
   purchases_min_amount: number | null;
   /** Inclusive YYYY-MM-DD; skip older Mindbody history on test/backfill. null = no cutoff. */
   sync_cutoff_date: string | null;
+  /** After a successful manual sync, set sync_cutoff_date to today. */
+  sync_cutoff_auto_advance: boolean;
   appointments_enabled: boolean;
   visits_enabled: boolean;
   line_items_enabled: boolean;

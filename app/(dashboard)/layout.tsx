@@ -21,11 +21,11 @@ export default async function DashboardLayout({
               Mindbody ↔ HubSpot
             </p>
             <h1 className="text-lg font-semibold text-slate-900">
-              Sync Console
+              Sync
             </h1>
           </div>
           <p className="text-sm text-slate-500">
-            Portal {session.portalId}
+            HubSpot {session.portalId}
           </p>
         </div>
       </header>

@@ -26,14 +26,14 @@ export async function POST(
 
     return NextResponse.json({
       ok: true,
-      message: `Test sync started for ${entityType} (max ${TEST_SYNC_RECORD_LIMIT} records). Check Reports for progress.`,
+      message: `Started a small ${entityType} sync (up to ${TEST_SYNC_RECORD_LIMIT} records). Check Reports for progress.`,
     });
   } catch (e) {
     console.error("[test-sync] route error:", e);
     return NextResponse.json(
       {
         error:
-          e instanceof Error ? e.message : "Test sync failed to start",
+          e instanceof Error ? e.message : "Could not start the sync",
       },
       { status: 500 }
     );

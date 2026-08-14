@@ -61,3 +61,30 @@ export function windowStartDate(
 ): string {
   return laterIsoDate(isoDateDaysAgo(defaultLookbackDays), cutoff) ?? isoDateDaysAgo(defaultLookbackDays);
 }
+
+/**
+ * After a successful manual sync, move the cutoff forward to today when enabled.
+ * Never moves the cutoff backwards. Returns the date written, or null if unchanged.
+ */
+export async function advanceSyncCutoffIfEnabled(
+  tenantId: string,
+  settings: { sync_cutoff_auto_advance: boolean; sync_cutoff_date: string | null }
+): Promise<string | null> {
+  if (!settings.sync_cutoff_auto_advance) return null;
+
+  const today = todayIsoDate();
+  const nextCutoff = laterIsoDate(settings.sync_cutoff_date, today) ?? today;
+  if (settings.sync_cutoff_date === nextCutoff) return null;
+
+  const { getSupabase } = await import("@/lib/db/client");
+  const { error } = await getSupabase()
+    .from("sync_settings")
+    .update({
+      sync_cutoff_date: nextCutoff,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("tenant_id", tenantId);
+
+  if (error) throw error;
+  return nextCutoff;
+}

@@ -91,6 +91,7 @@ export function normalizeSyncSettings(
         ? null
         : Number(row.purchases_min_amount),
     sync_cutoff_date: parseCutoffDate(row.sync_cutoff_date),
+    sync_cutoff_auto_advance: Boolean(row.sync_cutoff_auto_advance ?? false),
     appointments_enabled: Boolean(row.appointments_enabled ?? false),
     visits_enabled: Boolean(row.visits_enabled ?? false),
     line_items_enabled: Boolean(row.line_items_enabled ?? false),

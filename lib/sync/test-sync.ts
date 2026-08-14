@@ -27,6 +27,7 @@ import {
 import { normalizeSyncSettings } from "@/lib/sync/runtime-rules";
 import { TestSyncLogger } from "@/lib/sync/test-logger";
 import {
+  advanceSyncCutoffIfEnabled,
   extractMindbodyRecordDate,
   recordOnOrAfterCutoff,
   todayIsoDate,
@@ -549,6 +550,13 @@ export async function runTestSync(
 
     log.step("runTestSync.complete", { processed, failed, status });
     await finishRun(status, processed, failed);
+
+    if (status === "completed" || status === "partial") {
+      const advancedTo = await advanceSyncCutoffIfEnabled(tenantId, settings);
+      if (advancedTo) {
+        log.step("syncCutoff.advanced", { sync_cutoff_date: advancedTo });
+      }
+    }
 
     return runId;
   } catch (e) {

@@ -105,6 +105,7 @@ export async function PUT(
       dealsDirection?: string;
       purchasesMinAmount?: number | null;
       syncCutoffDate?: string | null;
+      syncCutoffAutoAdvance?: boolean;
       appointmentsEnabled?: boolean;
       visitsEnabled?: boolean;
       lineItemsEnabled?: boolean;
@@ -156,6 +157,9 @@ export async function PUT(
       } else {
         syncUpdate.sync_cutoff_date = raw;
       }
+    }
+    if (body.sync.syncCutoffAutoAdvance !== undefined) {
+      syncUpdate.sync_cutoff_auto_advance = body.sync.syncCutoffAutoAdvance;
     }
     if (body.sync.appointmentsEnabled !== undefined) {
       syncUpdate.appointments_enabled = body.sync.appointmentsEnabled;

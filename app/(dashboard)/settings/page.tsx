@@ -9,7 +9,7 @@ export default async function SettingsPage() {
     <div>
       <h2 className="text-2xl font-semibold text-slate-900">Settings</h2>
       <p className="mt-1 text-slate-600">
-        Sync rules and connection for this HubSpot portal.
+        Connect Mindbody and choose what to sync.
       </p>
       <div className="mt-6">
         <SettingsForm tenantId={session.tenantId} />
