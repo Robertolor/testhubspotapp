@@ -79,7 +79,7 @@ Legend: **PASS** = must be true to ship / cutover · **DEFERRED** = explicitly l
 | S1 | Tokens encrypted at rest | PASS | `lib/crypto/secrets.ts` |
 | S2 | Webhook signature verification | PASS | HubSpot + Mindbody verify modules |
 | S3 | API keys not returned from settings GET | PASS | settings route |
-| S4 | OAuth v3 token endpoints | DEFERRED | Listing blocker — migrate before submit |
+| S4 | OAuth 2026-03 token + introspect endpoints | PASS | `npm run validate:oauth` |
 
 ### Marketplace (see also `docs/HUBSPOT_SUBMIT_CHECKLIST.md`)
 
@@ -133,7 +133,6 @@ npm run verify:infra -- --mode all --profile hubspot-sync-sbx
 ## Deferred (do not block 1.0 listing)
 
 - Inngest removal
-- OAuth v3 migration (**do before marketplace submit**)
 - 14-day staging retention
 - Billing / usage events
 - Commercial Mindbody activation (no customer API keys)

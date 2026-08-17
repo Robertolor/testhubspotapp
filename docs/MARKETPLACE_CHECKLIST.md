@@ -15,6 +15,7 @@ Listing notes: see [LISTING.md](./LISTING.md)
 - [x] **Done** — Public OAuth app exists; install works on staging
 - [x] **Done** — Redirect: `https://testhubspotapp.vercel.app/api/oauth/hubspot/callback`
 - [x] **Done** — Scopes in `lib/hubspot/config.ts` (contacts/deals/line items + schemas)
+- [x] **Done** — OAuth token exchange/refresh/introspect use `/oauth/2026-03` (not v1)
 - [ ] **You** — Confirm `HUBSPOT_APP_ID` is set in Vercel Production
 - [ ] **You** — Sign Acceptable Use Policy (Distribution tab)
 

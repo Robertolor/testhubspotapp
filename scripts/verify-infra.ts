@@ -140,6 +140,15 @@ function runStaticChecks(): void {
   }
   ok("Middleware exposes public OAuth and webhook routes");
 
+  const oauthTs = readRepoFile("lib/hubspot/oauth.ts");
+  if (oauthTs.includes("oauth/v1/")) {
+    fail("oauth.ts still calls HubSpot OAuth v1 endpoints");
+  }
+  if (!oauthTs.includes("oauth/2026-03/token")) {
+    fail("oauth.ts must use oauth/2026-03/token");
+  }
+  ok("OAuth uses 2026-03 token and introspect endpoints");
+
   for (const doc of [
     "docs/INFRA_ACCEPTANCE.md",
     "infra/sam/README.md",
