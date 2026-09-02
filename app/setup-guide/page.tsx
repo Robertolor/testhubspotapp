@@ -93,8 +93,8 @@ export default function SetupGuidePage() {
             1. What the app does
           </h2>
           <p>
-            Mindbody ↔ HubSpot Sync connects one Mindbody site to one HubSpot
-            portal so you can keep CRM data aligned without manual exports.
+            Each HubSpot portal connects to one Mindbody site. The Mindbody
+            sandbox (site ID -99) can be used by more than one portal.
           </p>
           <ul className="list-disc space-y-2 pl-5">
             <li>

@@ -28,16 +28,15 @@ export async function getMindbodyAccountByTenant(
   return data as MindbodyAccount | null;
 }
 
-export async function getMindbodyAccountBySite(
+export async function getMindbodyAccountsBySite(
   siteId: number
-): Promise<MindbodyAccount | null> {
+): Promise<MindbodyAccount[]> {
   const { data, error } = await getSupabase()
     .from("mindbody_accounts")
     .select("*")
-    .eq("site_id", siteId)
-    .maybeSingle();
+    .eq("site_id", siteId);
   if (error) throw error;
-  return data as MindbodyAccount | null;
+  return (data ?? []) as MindbodyAccount[];
 }
 
 function getApiKey(account: MindbodyAccount): string {

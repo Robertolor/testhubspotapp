@@ -84,8 +84,8 @@ function formatUserFacingError(text: string): string {
 }
 
 function humanizeMindbodyMessage(message: string): string {
-  if (/mindbody_accounts_site_id_key|duplicate key value/i.test(message)) {
-    return "This Mindbody site is already connected to another HubSpot portal.";
+  if (/mindbody_accounts_site_id_key/i.test(message)) {
+    return "This Mindbody site is still locked to one portal in the database. Run the shared-site update, then save again.";
   }
   if (/invalid api key/i.test(message)) {
     return "Mindbody rejected the API key. Check the key and try again.";

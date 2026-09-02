@@ -30,12 +30,11 @@ function mindbodyAccountSaveError(error: {
   const message = error.message ?? "";
   if (
     error.code === "23505" ||
-    /mindbody_accounts_site_id_key/i.test(message)
+    /mindbody_accounts_tenant_id_key/i.test(message)
   ) {
     return NextResponse.json(
       {
-        error:
-          "This Mindbody site is already connected to another HubSpot portal.",
+        error: "Mindbody is already connected for this HubSpot portal.",
       },
       { status: 409 }
     );
