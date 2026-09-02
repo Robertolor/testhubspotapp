@@ -19,7 +19,7 @@ export default async function DashboardLayout({
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-teal-700">
-              Mindbody ↔ HubSpot
+              Mindbody and HubSpot
             </p>
             <h1 className="text-lg font-semibold text-slate-900">
               Sync

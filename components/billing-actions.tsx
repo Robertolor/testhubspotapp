@@ -4,18 +4,67 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ActionFeedback } from "@/components/ui/action-feedback";
 
-export function BillingActions({
+type PortalFlow = "default" | "cancel" | "payment_method";
+
+export function StripePortalButton({
+  flow,
+  children,
+  variant = "secondary",
+  className,
+}: {
+  flow: PortalFlow;
+  children: React.ReactNode;
+  variant?: "primary" | "secondary" | "ghost";
+  className?: string;
+}) {
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function openPortal() {
+    setError(null);
+    setPending(true);
+    try {
+      const res = await fetch("/api/billing/portal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ flow }),
+      });
+      const json = (await res.json()) as { url?: string; error?: string };
+      if (!res.ok || !json.url) {
+        throw new Error(json.error ?? "Could not open billing");
+      }
+      window.location.href = json.url;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not open billing");
+      setPending(false);
+    }
+  }
+
+  return (
+    <span className="inline-flex flex-col items-start gap-2">
+      {error ? <ActionFeedback type="error">{error}</ActionFeedback> : null}
+      <Button
+        type="button"
+        variant={variant}
+        loading={pending}
+        disabled={pending}
+        className={className}
+        onClick={openPortal}
+      >
+        {children}
+      </Button>
+    </span>
+  );
+}
+
+export function BillingCheckoutButtons({
   canStartTrial,
-  canManage,
   showYearly,
 }: {
   canStartTrial: boolean;
-  canManage: boolean;
   showYearly: boolean;
 }) {
-  const [pending, setPending] = useState<"monthly" | "yearly" | "portal" | null>(
-    null
-  );
+  const [pending, setPending] = useState<"monthly" | "yearly" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function startCheckout(interval: "monthly" | "yearly") {
@@ -38,55 +87,27 @@ export function BillingActions({
     }
   }
 
-  async function openPortal() {
-    setError(null);
-    setPending("portal");
-    try {
-      const res = await fetch("/api/billing/portal", { method: "POST" });
-      const json = (await res.json()) as { url?: string; error?: string };
-      if (!res.ok || !json.url) {
-        throw new Error(json.error ?? "Could not open billing portal");
-      }
-      window.location.href = json.url;
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not open billing portal");
-      setPending(null);
-    }
-  }
+  if (!canStartTrial) return null;
 
   return (
     <div className="space-y-3">
       {error ? <ActionFeedback type="error">{error}</ActionFeedback> : null}
       <div className="flex flex-wrap gap-3">
-        {canStartTrial ? (
-          <>
-            <Button
-              loading={pending === "monthly"}
-              disabled={pending !== null}
-              onClick={() => startCheckout("monthly")}
-            >
-              Start 14-day trial
-            </Button>
-            {showYearly ? (
-              <Button
-                variant="secondary"
-                loading={pending === "yearly"}
-                disabled={pending !== null}
-                onClick={() => startCheckout("yearly")}
-              >
-                Yearly trial
-              </Button>
-            ) : null}
-          </>
-        ) : null}
-        {canManage ? (
+        <Button
+          loading={pending === "monthly"}
+          disabled={pending !== null}
+          onClick={() => startCheckout("monthly")}
+        >
+          Start 14-day trial
+        </Button>
+        {showYearly ? (
           <Button
-            variant={canStartTrial ? "secondary" : "primary"}
-            loading={pending === "portal"}
+            variant="secondary"
+            loading={pending === "yearly"}
             disabled={pending !== null}
-            onClick={openPortal}
+            onClick={() => startCheckout("yearly")}
           >
-            Manage billing
+            Yearly plan
           </Button>
         ) : null}
       </div>

@@ -14,7 +14,7 @@ export async function BillingBanner({ tenantId }: { tenantId: string }) {
       : "the end of your trial";
     return (
       <div className="mb-6 rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-900">
-        Trial active until {ends}. Your card will be charged unless you cancel
+        Trial until {ends}. After that your card is charged unless you cancel
         or uninstall.{" "}
         <Link href="/billing" className="font-medium underline">
           Billing
@@ -37,8 +37,8 @@ export async function BillingBanner({ tenantId }: { tenantId: string }) {
   if (!entitlement.entitled) {
     return (
       <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-        A trial or subscription is required to sync. Card required; you are
-        charged after 14 days unless you cancel or uninstall.{" "}
+        A trial or subscription is required to sync. Add a card to start 14 days
+        free. You are charged after that unless you cancel or uninstall.{" "}
         <Link href="/billing" className="font-medium underline">
           Start trial
         </Link>
