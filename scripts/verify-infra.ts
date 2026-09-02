@@ -129,10 +129,13 @@ function runStaticChecks(): void {
   if (!workerTs.includes("PermanentJobError")) {
     fail("worker must define PermanentJobError for non-retryable jobs");
   }
-  if (!workerTs.includes('status === "suspended"')) {
+  if (!workerTs.includes('status === "suspended"') && !workerTs.includes('tenantStatus === "suspended"')) {
     fail("worker must skip suspended tenants");
   }
-  ok("Worker drops unknown tenants and skips suspended");
+  if (!workerTs.includes("evaluateEntitlement")) {
+    fail("worker must skip tenants that are not billing-entitled");
+  }
+  ok("Worker drops unknown tenants and skips suspended/unentitled");
 
   const middleware = readRepoFile("middleware.ts");
   if (!middleware.includes('"/api/webhooks"')) {
@@ -148,6 +151,33 @@ function runStaticChecks(): void {
     fail("oauth.ts must use oauth/2026-03/token");
   }
   ok("OAuth uses 2026-03 token and introspect endpoints");
+
+  const oauthCallback = readRepoFile("app/api/oauth/hubspot/callback/route.ts");
+  if (oauthCallback.includes("trial_ends_at")) {
+    fail("OAuth callback must not start a no-card trial; trial starts at Stripe Checkout");
+  }
+  ok("HubSpot install does not grant a no-card trial");
+
+  const checkoutTs = readRepoFile("lib/billing/checkout.ts");
+  if (!checkoutTs.includes('payment_method_collection: "always"')) {
+    fail("Checkout must require a card during trial");
+  }
+  if (!checkoutTs.includes("trial_period_days")) {
+    fail("Checkout must pass Stripe trial_period_days");
+  }
+  ok("Stripe Checkout is a card-required trial");
+
+  const stripeWebhook = readRepoFile("app/api/webhooks/stripe/route.ts");
+  if (!stripeWebhook.includes("constructEvent")) {
+    fail("Stripe webhook route must verify signatures");
+  }
+  ok("Stripe webhook signature verification is present");
+
+  const hubspotWebhook = readRepoFile("app/api/webhooks/hubspot/route.ts");
+  if (!hubspotWebhook.includes("cancelStripeForPortal")) {
+    fail("HubSpot webhook must cancel Stripe on uninstall");
+  }
+  ok("HubSpot uninstall cancels Stripe");
 
   for (const doc of [
     "docs/INFRA_ACCEPTANCE.md",

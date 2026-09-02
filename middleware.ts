@@ -43,6 +43,8 @@ export const config = {
     "/setup/:path*",
     "/settings/:path*",
     "/reports/:path*",
+    "/billing",
+    "/billing/:path*",
     "/api/tenants/:path*",
   ],
 };

@@ -29,6 +29,8 @@ Copy `.env.example` to `.env.local` and fill in values:
 - Mindbody developer API key
 - Supabase URL + service role key
 - `TOKEN_ENCRYPTION_KEY` and `SESSION_SECRET` (32+ char random strings)
+- Billing (optional until paid listing): `BILLING_ENFORCEMENT=false` (default), `BILLING_TRIAL_DAYS=14`
+- Stripe sandbox: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID_MONTHLY` (optional `STRIPE_PRICE_ID_YEARLY`). Webhook URL: `/api/webhooks/stripe` (or `/webhooks/stripe`). Enable **app.uninstall** on the HubSpot app webhook so uninstall cancels Stripe.
 
 ### 3. Run locally
 

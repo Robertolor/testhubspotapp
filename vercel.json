@@ -15,6 +15,10 @@
     {
       "source": "/webhooks/mindbody",
       "destination": "/api/webhooks/mindbody"
+    },
+    {
+      "source": "/webhooks/stripe",
+      "destination": "/api/webhooks/stripe"
     }
   ]
 }

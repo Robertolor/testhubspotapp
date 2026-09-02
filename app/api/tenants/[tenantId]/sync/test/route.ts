@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runInBackground } from "@/lib/background";
 import { getSession } from "@/lib/auth/session";
+import { requireBillingEntitlement } from "@/lib/billing/require";
 import { dispatchTestSync } from "@/lib/queue/dispatch";
 import { TEST_SYNC_RECORD_LIMIT } from "@/lib/sync/test-sync";
 import type { EntityType } from "@/lib/db/types";
@@ -18,6 +19,9 @@ export async function POST(
     if (!session || session.tenantId !== tenantId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const denied = await requireBillingEntitlement(tenantId);
+    if (denied) return denied;
 
     const body = (await request.json()) as { entityType?: EntityType };
     const entityType = body.entityType ?? "contact";

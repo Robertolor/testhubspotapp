@@ -16,6 +16,31 @@ export interface Tenant {
   id: string;
   name: string;
   status: TenantStatus;
+  /** Cached Stripe trial_end for UI. Access is granted from billing_subscriptions.status. */
+  trial_ends_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type StripeSubscriptionStatus =
+  | "incomplete"
+  | "incomplete_expired"
+  | "trialing"
+  | "active"
+  | "past_due"
+  | "canceled"
+  | "unpaid"
+  | "paused";
+
+export interface BillingSubscription {
+  tenant_id: string;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  stripe_price_id: string | null;
+  status: StripeSubscriptionStatus | string | null;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+  billing_email: string | null;
   created_at: string;
   updated_at: string;
 }

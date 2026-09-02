@@ -6,6 +6,10 @@ import {
   verifyHubspotWebhookV3,
 } from "@/lib/hubspot/webhook-verify";
 import { dispatchProcessWebhook } from "@/lib/queue/dispatch";
+import {
+  cancelStripeForPortal,
+  isHubspotUninstallEvent,
+} from "@/lib/billing/uninstall";
 
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
@@ -37,10 +41,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const events = Array.isArray(payload) ? payload : [payload];
-  const portalId = Number(
-    (events[0] as Record<string, unknown>)?.portalId ?? 0
-  );
+  const events = (Array.isArray(payload) ? payload : [payload]) as Record<
+    string,
+    unknown
+  >[];
+  const portalId = Number(events[0]?.portalId ?? 0);
+
+  const uninstallEvents = events.filter(isHubspotUninstallEvent);
+  if (uninstallEvents.length && portalId) {
+    await cancelStripeForPortal(portalId);
+  }
+
+  const crmEvents = events.filter((event) => !isHubspotUninstallEvent(event));
+  if (crmEvents.length === 0) {
+    return NextResponse.json({
+      ok: true,
+      uninstalled: uninstallEvents.length > 0,
+    });
+  }
 
   if (!portalId) {
     return NextResponse.json({ error: "Missing portalId" }, { status: 400 });
@@ -51,9 +69,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unknown portal" }, { status: 404 });
   }
 
-  const idempotencyKey = events
-    .map((e) => {
-      const ev = e as Record<string, unknown>;
+  const crmPayload = Array.isArray(payload) ? crmEvents : crmEvents[0];
+  const idempotencyKey = crmEvents
+    .map((ev) => {
       return `${ev.eventId ?? ev.subscriptionType}-${ev.objectId}-${ev.occurredAt ?? ev.attemptNumber}`;
     })
     .join("|");
@@ -64,7 +82,7 @@ export async function POST(request: NextRequest) {
       tenant_id: account.tenant_id,
       source: "hubspot",
       idempotency_key: idempotencyKey.slice(0, 500),
-      payload: payload as object,
+      payload: crmPayload as object,
       signature_valid: true,
       status: "queued",
     })
@@ -82,7 +100,7 @@ export async function POST(request: NextRequest) {
     tenantId: account.tenant_id,
     source: "hubspot",
     deliveryId: delivery.id,
-    payload,
+    payload: crmPayload,
   });
 
   return NextResponse.json({ ok: true });

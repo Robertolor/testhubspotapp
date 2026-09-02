@@ -8,6 +8,7 @@ const npmScriptChecks = [
   "validate:queue",
   "validate:dispatch",
   "validate:oauth",
+  "validate:billing",
 ] as const;
 
 function runNpmScript(script: string): void {

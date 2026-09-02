@@ -9,6 +9,7 @@ const links = [
   { href: "/settings", label: "Settings" },
   { href: "/settings/mappings", label: "Mappings" },
   { href: "/reports", label: "Reports" },
+  { href: "/billing", label: "Billing" },
 ];
 
 export function DashboardNav() {

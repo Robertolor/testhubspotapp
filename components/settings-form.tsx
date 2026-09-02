@@ -414,6 +414,12 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
         }
       }
       if (!res.ok) {
+        if (res.status === 402) {
+          throw new Error(
+            json.error ??
+              "A trial or subscription is required. Open Billing to start one."
+          );
+        }
         throw new Error(json.error ?? `Server error (${res.status})`);
       }
       setBackfillFeedback(
@@ -453,6 +459,12 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
         }
       }
       if (!res.ok) {
+        if (res.status === 402) {
+          throw new Error(
+            json.error ??
+              "A trial or subscription is required. Open Billing to start one."
+          );
+        }
         throw new Error(json.error ?? `Server error (${res.status})`);
       }
       setTestSyncFeedback(

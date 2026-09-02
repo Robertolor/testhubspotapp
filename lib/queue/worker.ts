@@ -1,4 +1,9 @@
 import { getSupabase } from "@/lib/db/client";
+import { isBillingEnforcementEnabled } from "@/lib/billing/config";
+import {
+  evaluateEntitlement,
+  loadTenantBillingSnapshot,
+} from "@/lib/billing/entitlement";
 import type { WebhookSource } from "@/lib/db/types";
 import type { QueueMessage } from "@/lib/queue/message";
 import { processWebhookDelivery, runBackfill } from "@/lib/sync/processor";
@@ -15,17 +20,18 @@ type DeliveryRow = {
 export class PermanentJobError extends Error {}
 
 async function assertTenantRunnable(tenantId: string): Promise<"ok" | "skip"> {
-  const { data, error } = await getSupabase()
-    .from("tenants")
-    .select("id, status")
-    .eq("id", tenantId)
-    .maybeSingle();
-
-  if (error) throw error;
-  if (!data) {
+  const snapshot = await loadTenantBillingSnapshot(tenantId);
+  if (!snapshot) {
     throw new PermanentJobError(`Tenant not found: ${tenantId}`);
   }
-  if (data.status === "suspended") {
+  if (snapshot.tenantStatus === "suspended") {
+    return "skip";
+  }
+  const entitlement = evaluateEntitlement({
+    subscriptionStatus: snapshot.subscriptionStatus,
+    enforcement: isBillingEnforcementEnabled(),
+  });
+  if (!entitlement.entitled) {
     return "skip";
   }
   return "ok";

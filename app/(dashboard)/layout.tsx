@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
+import { BillingBanner } from "@/components/billing-banner";
 import { DashboardNav } from "@/components/dashboard-nav";
 
 export default async function DashboardLayout({
@@ -31,7 +32,10 @@ export default async function DashboardLayout({
       </header>
       <main className="mx-auto flex w-full max-w-5xl flex-1 px-6 py-8">
         <DashboardNav />
-        <div className="mt-8">{children}</div>
+        <div className="mt-8">
+          <BillingBanner tenantId={session.tenantId} />
+          {children}
+        </div>
       </main>
     </div>
   );
