@@ -22,6 +22,30 @@ async function assertTenantAccess(tenantId: string) {
   return null;
 }
 
+function mindbodyAccountSaveError(error: {
+  code?: string;
+  message?: string;
+} | null) {
+  if (!error) return null;
+  const message = error.message ?? "";
+  if (
+    error.code === "23505" ||
+    /mindbody_accounts_site_id_key/i.test(message)
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "This Mindbody site is already connected to another HubSpot portal.",
+      },
+      { status: 409 }
+    );
+  }
+  return NextResponse.json(
+    { error: error.message ?? "Failed to save Mindbody account" },
+    { status: 500 }
+  );
+}
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ tenantId: string }> }
@@ -296,22 +320,14 @@ export async function PUT(
         .from("mindbody_accounts")
         .update(upsertRow)
         .eq("tenant_id", tenantId);
-      if (updateError) {
-        return NextResponse.json(
-          { error: updateError.message ?? "Failed to update Mindbody account" },
-          { status: 500 }
-        );
-      }
+      const updateFailed = mindbodyAccountSaveError(updateError);
+      if (updateFailed) return updateFailed;
     } else {
       const { error: insertError } = await supabase
         .from("mindbody_accounts")
         .insert(upsertRow);
-      if (insertError) {
-        return NextResponse.json(
-          { error: insertError.message ?? "Failed to save Mindbody account" },
-          { status: 500 }
-        );
-      }
+      const insertFailed = mindbodyAccountSaveError(insertError);
+      if (insertFailed) return insertFailed;
     }
 
     if (staffUsername && staffPassword) {

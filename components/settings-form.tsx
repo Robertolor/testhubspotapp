@@ -84,6 +84,9 @@ function formatUserFacingError(text: string): string {
 }
 
 function humanizeMindbodyMessage(message: string): string {
+  if (/mindbody_accounts_site_id_key|duplicate key value/i.test(message)) {
+    return "This Mindbody site is already connected to another HubSpot portal.";
+  }
   if (/invalid api key/i.test(message)) {
     return "Mindbody rejected the API key. Check the key and try again.";
   }
@@ -127,6 +130,7 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
   const [credentialsSaveSucceeded, setCredentialsSaveSucceeded] = useState(false);
   const [syncSaveSucceeded, setSyncSaveSucceeded] = useState(false);
   const [mindbodyFeedback, setMindbodyFeedback] = useState<string | null>(null);
+  const [mindbodyFeedbackIsError, setMindbodyFeedbackIsError] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
   const [testSyncFeedback, setTestSyncFeedback] = useState<string | null>(null);
   const [testSyncNeedsBilling, setTestSyncNeedsBilling] = useState(false);
@@ -301,6 +305,7 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
   async function saveCredentials() {
     setPendingAction("saveCredentials");
     setMindbodyFeedback(null);
+    setMindbodyFeedbackIsError(false);
     setCredentialsSaveSucceeded(false);
     try {
       if (!siteId.trim()) {
@@ -331,12 +336,14 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
       });
 
       setCredentialsSaveSucceeded(true);
+      setMindbodyFeedbackIsError(false);
       setMindbodyFeedback("Mindbody connection saved.");
       setApiKey("");
       setStaffPassword("");
       setEditingCredentials(false);
       await refreshSettings();
     } catch (e) {
+      setMindbodyFeedbackIsError(true);
       setMindbodyFeedback(
         formatUserFacingError(e instanceof Error ? e.message : "Save failed")
       );
@@ -518,7 +525,7 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
             </p>
             {mindbodyFeedback ? (
               <ActionFeedback
-                type={isErrorMessage(mindbodyFeedback) ? "error" : "success"}
+                type={mindbodyFeedbackIsError ? "error" : "success"}
                 className="mt-3"
               >
                 {mindbodyFeedback}
@@ -527,10 +534,11 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
             <div className="mt-4">
               <Button
                 variant="secondary"
-                onClick={() => {
-                  setMindbodyFeedback(null);
-                  setEditingCredentials(true);
-                }}
+                  onClick={() => {
+                    setMindbodyFeedback(null);
+                    setMindbodyFeedbackIsError(false);
+                    setEditingCredentials(true);
+                  }}
                 disabled={actionBusy}
               >
                 Update connection
@@ -555,7 +563,7 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
             ) : null}
             {mindbodyFeedback ? (
               <ActionFeedback
-                type={isErrorMessage(mindbodyFeedback) ? "error" : "success"}
+                type={mindbodyFeedbackIsError ? "error" : "success"}
                 className="mt-3"
               >
                 {mindbodyFeedback}
