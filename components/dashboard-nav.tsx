@@ -23,7 +23,7 @@ export function DashboardNav() {
   }
 
   return (
-    <nav className="flex gap-1 border-b border-slate-200 pb-4">
+    <nav className="flex w-full flex-wrap gap-1 border-b border-slate-200 pb-4">
       {links.map((link) => (
         <Link
           key={link.href}

@@ -30,9 +30,9 @@ export default async function DashboardLayout({
           </p>
         </div>
       </header>
-      <main className="mx-auto flex w-full max-w-5xl flex-1 px-6 py-8">
+      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-6 py-8">
         <DashboardNav />
-        <div className="mt-8">
+        <div className="mt-8 min-w-0">
           <BillingBanner tenantId={session.tenantId} />
           {children}
         </div>
