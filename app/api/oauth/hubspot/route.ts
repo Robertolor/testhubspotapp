@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { getSupabase } from "@/lib/db/client";
 import { buildHubspotAuthorizeUrl } from "@/lib/hubspot/oauth";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const state = randomBytes(24).toString("hex");
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
@@ -21,5 +23,7 @@ export async function GET() {
     );
   }
 
-  return NextResponse.redirect(buildHubspotAuthorizeUrl(state));
+  const response = NextResponse.redirect(buildHubspotAuthorizeUrl(state));
+  response.headers.set("Cache-Control", "no-store");
+  return response;
 }

@@ -5,11 +5,14 @@ import { setSessionCookie } from "@/lib/auth/session";
 import {
   exchangeHubspotCode,
   getHubspotTokenInfo,
+  type HubspotTokenResponse,
 } from "@/lib/hubspot/oauth";
 import { ensureHubspotWebhookSubscriptions } from "@/lib/hubspot/webhooks-register";
 import { bootstrapHubspotProperties } from "@/lib/hubspot/properties";
 import { seedDefaultFieldMappings } from "@/lib/sync/field-mappings";
 import { getAppUrl } from "@/lib/utils";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
@@ -22,34 +25,45 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  if (!code || !state) {
+  if (!code) {
     return NextResponse.redirect(`${getAppUrl()}/?error=missing_code`);
   }
 
-  const { data: oauthState, error: stateError } = await getSupabase()
-    .from("oauth_states")
-    .select("*")
-    .eq("state", state)
-    .maybeSingle();
+  let tenantIdFromState: string | null = null;
+  let redirectAfter = "/setup";
 
-  if (stateError || !oauthState) {
-    return NextResponse.redirect(`${getAppUrl()}/?error=invalid_state`);
+  if (state) {
+    const { data: oauthState, error: stateError } = await getSupabase()
+      .from("oauth_states")
+      .select("*")
+      .eq("state", state)
+      .maybeSingle();
+
+    if (oauthState && !stateError) {
+      if (new Date(oauthState.expires_at) < new Date()) {
+        return NextResponse.redirect(`${getAppUrl()}/?error=state_expired`);
+      }
+      tenantIdFromState = (oauthState.tenant_id as string | null) ?? null;
+      redirectAfter = oauthState.redirect_after || "/setup";
+      await getSupabase().from("oauth_states").delete().eq("state", state);
+    }
   }
 
-  if (new Date(oauthState.expires_at) < new Date()) {
-    return NextResponse.redirect(`${getAppUrl()}/?error=state_expired`);
+  let tokens: HubspotTokenResponse;
+  try {
+    tokens = await exchangeHubspotCode(code);
+  } catch (e) {
+    console.error("HubSpot OAuth code exchange failed:", e);
+    return NextResponse.redirect(`${getAppUrl()}/?error=oauth_failed`);
   }
 
-  await getSupabase().from("oauth_states").delete().eq("state", state);
-
-  const tokens = await exchangeHubspotCode(code);
   const tokenInfo = await getHubspotTokenInfo(tokens.access_token);
   const portalId = tokenInfo.hub_id;
   const expiresAt = new Date(
     Date.now() + tokens.expires_in * 1000
   ).toISOString();
 
-  let tenantId = oauthState.tenant_id as string | null;
+  let tenantId = tenantIdFromState;
 
   const { data: existingHs } = await getSupabase()
     .from("hubspot_accounts")
@@ -121,6 +135,5 @@ export async function GET(request: NextRequest) {
 
   await setSessionCookie(tenantId, portalId);
 
-  const redirectTo = oauthState.redirect_after || "/setup";
-  return NextResponse.redirect(`${getAppUrl()}${redirectTo}`);
+  return NextResponse.redirect(`${getAppUrl()}${redirectAfter}`);
 }

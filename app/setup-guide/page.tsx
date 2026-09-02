@@ -160,12 +160,12 @@ export default function SetupGuidePage() {
                 HubSpot Marketplace
               </a>{" "}
               and click <strong>Install app</strong>, or go directly to{" "}
-              <Link
+              <a
                 className="font-medium text-teal-700 hover:underline"
                 href="/api/oauth/hubspot"
               >
                 Install with HubSpot
-              </Link>
+              </a>
               .
             </li>
             <li>

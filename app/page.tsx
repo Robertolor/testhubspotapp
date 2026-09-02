@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { Button } from "@/components/ui/button";
@@ -37,9 +36,9 @@ export default async function HomePage({
         )}
 
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-          <Link href="/api/oauth/hubspot">
+          <a href="/api/oauth/hubspot">
             <Button className="min-w-[200px]">Install with HubSpot</Button>
-          </Link>
+          </a>
         </div>
 
         <ul className="mt-10 space-y-2 text-left text-sm text-slate-600">
