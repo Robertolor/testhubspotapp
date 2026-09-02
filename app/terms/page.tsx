@@ -15,7 +15,7 @@ export default function TermsPage() {
     <div className="flex flex-1 bg-slate-50 px-6 py-12">
       <article className="mx-auto max-w-2xl space-y-8 text-slate-700">
         <header className="space-y-2">
-          <p className="text-sm font-semibold uppercase tracking-wide text-teal-700">
+          <p className="text-sm font-semibold uppercase tracking-wide text-hs-link">
             Legal
           </p>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">
@@ -33,7 +33,7 @@ export default function TermsPage() {
             or &quot;our&quot;). By installing the App, connecting your accounts,
             or using any part of the service, you agree to these Terms and to
             our{" "}
-            <Link href="/privacy" className="font-medium text-teal-700 hover:underline">
+            <Link href="/privacy" className="font-medium text-hs-link hover:underline">
               Privacy Policy
             </Link>
             , which is incorporated by reference.
@@ -80,7 +80,7 @@ export default function TermsPage() {
             by HubSpot or Mindbody. Your use of the App from the HubSpot
             Marketplace is also subject to{" "}
             <a
-              className="font-medium text-teal-700 hover:underline"
+              className="font-medium text-hs-link hover:underline"
               href="https://legal.hubspot.com/marketplace-tou"
               rel="noopener noreferrer"
               target="_blank"
@@ -277,7 +277,7 @@ export default function TermsPage() {
             Questions about these Terms:{" "}
             {email ? (
               <a
-                className="font-medium text-teal-700 hover:underline"
+                className="font-medium text-hs-link hover:underline"
                 href={`mailto:${email}`}
               >
                 {email}
@@ -297,7 +297,7 @@ export default function TermsPage() {
         </p>
 
         <p className="text-sm">
-          <Link href="/" className="text-teal-700 hover:underline">
+          <Link href="/" className="text-hs-link hover:underline">
             ← Back to home
           </Link>
         </p>

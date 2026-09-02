@@ -74,7 +74,7 @@ export function ReportsTable({ tenantId }: { tenantId: string }) {
                   <td className="py-3">
                     <Link
                       href={`/reports/${run.id}`}
-                      className="text-teal-700 hover:underline"
+                      className="text-hs-link hover:underline"
                     >
                       Details
                     </Link>

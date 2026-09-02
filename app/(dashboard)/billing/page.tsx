@@ -68,7 +68,7 @@ export default async function BillingPage({
       </div>
 
       {checkout === "success" ? (
-        <p className="rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-900">
+        <p className="rounded-md border border-hs-border bg-white px-4 py-3 text-sm text-hs-navy">
           Checkout is complete. Stripe may take a few seconds to show your trial
           here.
         </p>

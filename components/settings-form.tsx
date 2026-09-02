@@ -657,7 +657,7 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
         )}
       </Card>
 
-      <Card className="border-amber-200 bg-amber-50/50">
+      <Card className="border-l-4 border-l-hs-orange">
         <CardTitle>Try a small sync</CardTitle>
         <p className="mt-1 text-sm text-slate-600">
           Copies up to <strong>20</strong> contacts or deals from Mindbody to

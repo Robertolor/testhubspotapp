@@ -13,7 +13,7 @@ export async function BillingBanner({ tenantId }: { tenantId: string }) {
       ? new Date(entitlement.snapshot.trialEndsAt).toLocaleDateString()
       : "the end of your trial";
     return (
-      <div className="mb-6 rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-900">
+      <div className="mb-6 rounded-md border border-hs-border bg-white px-4 py-3 text-sm text-hs-navy">
         Trial until {ends}. After that your card is charged unless you cancel
         or uninstall.{" "}
         <Link href="/billing" className="font-medium underline">

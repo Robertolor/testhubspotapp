@@ -60,7 +60,7 @@ export default async function RunDetailPage({
 
   return (
     <div className="space-y-6">
-      <Link href="/reports" className="text-sm text-teal-700 hover:underline">
+      <Link href="/reports" className="text-sm text-hs-link hover:underline">
         ← Back to reports
       </Link>
       <h2 className="text-2xl font-semibold text-slate-900">Sync run details</h2>
@@ -153,7 +153,7 @@ export default async function RunDetailPage({
                       HubSpot:{" "}
                       {portalId ? (
                         <a
-                          className="text-teal-700 underline"
+                          className="text-hs-link underline"
                           href={`https://app.hubspot.com/contacts/${portalId}/record/${hubspotRecordPath(ev.entity_type)}/${ev.target_id}`}
                           target="_blank"
                           rel="noreferrer"

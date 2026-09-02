@@ -15,22 +15,22 @@ export default async function HomePage({
   }
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-teal-50 px-6 py-12">
+    <div className="flex flex-1 flex-col items-center justify-center bg-hs-canvas px-6 py-16">
       <div className="max-w-lg text-center">
-        <p className="text-sm font-semibold uppercase tracking-wide text-teal-700">
-          HubSpot Marketplace App
+        <p className="text-sm font-semibold uppercase tracking-[0.14em] text-hs-orange">
+          HubSpot Marketplace
         </p>
-        <h1 className="mt-3 text-4xl font-bold tracking-tight text-slate-900">
-          Mindbody ↔ HubSpot Sync
+        <h1 className="mt-3 text-4xl font-semibold tracking-tight text-hs-navy">
+          Mindbody Sync
         </h1>
-        <p className="mt-4 text-lg text-slate-600">
+        <p className="mt-4 text-lg text-hs-muted">
           Sync contacts and deals between Mindbody and HubSpot. Install via
           OAuth, add your Mindbody API credentials, and configure sync direction
           per client.
         </p>
 
         {params.error && (
-          <p className="mt-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">
+          <p className="mt-4 rounded-md bg-red-50 px-4 py-2 text-sm text-red-700">
             Installation error: {params.error}
           </p>
         )}
@@ -41,11 +41,11 @@ export default async function HomePage({
           </a>
         </div>
 
-        <ul className="mt-10 space-y-2 text-left text-sm text-slate-600">
-          <li>• OAuth 2.0 HubSpot installation</li>
-          <li>• Per-tenant Mindbody Site ID + API key</li>
-          <li>• Webhooks from HubSpot and Mindbody</li>
-          <li>• Configurable sync direction for contacts and deals</li>
+        <ul className="mt-10 space-y-2 text-left text-sm text-hs-muted">
+          <li>OAuth install from HubSpot</li>
+          <li>Mindbody Site ID, API key, and staff login per portal</li>
+          <li>Webhooks from HubSpot and Mindbody</li>
+          <li>Sync direction for contacts and deals</li>
         </ul>
       </div>
     </div>

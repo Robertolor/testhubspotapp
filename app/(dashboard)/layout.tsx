@@ -14,25 +14,23 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-slate-50">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+    <div className="flex min-h-0 flex-1 flex-col bg-hs-canvas">
+      <header className="bg-hs-navy text-white">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-teal-700">
-              Mindbody and HubSpot
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/65">
+              Marketplace app
             </p>
-            <h1 className="text-lg font-semibold text-slate-900">
-              Sync
-            </h1>
+            <h1 className="text-base font-semibold">Mindbody Sync</h1>
           </div>
-          <p className="text-sm text-slate-500">
-            HubSpot {session.portalId}
+          <p className="text-sm text-white/75">
+            Portal {session.portalId}
           </p>
         </div>
       </header>
-      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-6 py-8">
+      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-6 py-6">
         <DashboardNav />
-        <div className="mt-8 min-w-0">
+        <div className="mt-6 min-w-0">
           <BillingBanner tenantId={session.tenantId} />
           {children}
         </div>

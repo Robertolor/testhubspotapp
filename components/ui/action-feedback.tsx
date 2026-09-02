@@ -15,7 +15,7 @@ export function ActionFeedback({
       className={cn(
         "rounded-lg border px-3 py-2 text-sm",
         type === "success" &&
-          "border-teal-200 bg-teal-50 text-teal-900",
+          "border-hs-border bg-white text-hs-navy",
         type === "error" && "border-red-200 bg-red-50 text-red-800",
         className
       )}
