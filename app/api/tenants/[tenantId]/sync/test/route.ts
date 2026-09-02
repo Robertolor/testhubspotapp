@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { runInBackground } from "@/lib/background";
 import { getSession } from "@/lib/auth/session";
 import { requireBillingEntitlement } from "@/lib/billing/require";
+import { requireMindbodyConfigured } from "@/lib/mindbody/require";
 import { dispatchTestSync } from "@/lib/queue/dispatch";
 import { TEST_SYNC_RECORD_LIMIT } from "@/lib/sync/test-sync";
 import type { EntityType } from "@/lib/db/types";
@@ -22,6 +23,9 @@ export async function POST(
 
     const denied = await requireBillingEntitlement(tenantId);
     if (denied) return denied;
+
+    const mindbodyDenied = await requireMindbodyConfigured(tenantId);
+    if (mindbodyDenied) return mindbodyDenied;
 
     const body = (await request.json()) as { entityType?: EntityType };
     const entityType = body.entityType ?? "contact";

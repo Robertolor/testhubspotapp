@@ -665,13 +665,20 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
           >
             {testSyncFeedback}
           </ActionFeedback>
+        ) : !mindbodyReady ? (
+          <p className="mt-3 text-sm text-slate-700">
+            Save your Mindbody connection first. Then you can run a sync.
+          </p>
         ) : null}
         <div className="mt-4 flex flex-wrap gap-3">
           <Button
             variant="secondary"
             onClick={() => runTestSync("contact")}
             loading={pendingAction === "testContact"}
-            disabled={actionBusy && pendingAction !== "testContact"}
+            disabled={
+              !mindbodyReady ||
+              (actionBusy && pendingAction !== "testContact")
+            }
           >
             {pendingAction === "testContact"
               ? "Starting…"
@@ -681,7 +688,9 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
             variant="secondary"
             onClick={() => runTestSync("deal")}
             loading={pendingAction === "testDeal"}
-            disabled={actionBusy && pendingAction !== "testDeal"}
+            disabled={
+              !mindbodyReady || (actionBusy && pendingAction !== "testDeal")
+            }
           >
             {pendingAction === "testDeal"
               ? "Starting…"
@@ -972,7 +981,10 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
             variant="secondary"
             onClick={() => runBackfill("contact")}
             loading={pendingAction === "backfillContact"}
-            disabled={actionBusy && pendingAction !== "backfillContact"}
+            disabled={
+              !mindbodyReady ||
+              (actionBusy && pendingAction !== "backfillContact")
+            }
           >
             {pendingAction === "backfillContact"
               ? "Starting…"
@@ -982,7 +994,10 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
             variant="secondary"
             onClick={() => runBackfill("deal")}
             loading={pendingAction === "backfillDeal"}
-            disabled={actionBusy && pendingAction !== "backfillDeal"}
+            disabled={
+              !mindbodyReady ||
+              (actionBusy && pendingAction !== "backfillDeal")
+            }
           >
             {pendingAction === "backfillDeal"
               ? "Starting…"
@@ -998,6 +1013,10 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
           >
             {backfillFeedback}
           </ActionFeedback>
+        ) : !mindbodyReady ? (
+          <p className="mt-3 text-sm text-slate-700">
+            Save your Mindbody connection first. Then you can run a sync.
+          </p>
         ) : null}
       </details>
     </div>
