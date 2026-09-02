@@ -37,10 +37,9 @@ export async function BillingBanner({ tenantId }: { tenantId: string }) {
   if (!entitlement.entitled) {
     return (
       <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-        A trial or subscription is required to sync. Add a card to start 14 days
-        free. You are charged after that unless you cancel or uninstall.{" "}
+        Billing is not set up yet. Start a trial to sync.{" "}
         <Link href="/billing" className="font-medium underline">
-          Start trial
+          Go to Billing
         </Link>
       </div>
     );

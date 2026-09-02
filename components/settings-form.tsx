@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ActionFeedback } from "@/components/ui/action-feedback";
+import { BillingRequiredNotice } from "@/components/billing-required-notice";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 import {
@@ -128,7 +129,9 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
   const [mindbodyFeedback, setMindbodyFeedback] = useState<string | null>(null);
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
   const [testSyncFeedback, setTestSyncFeedback] = useState<string | null>(null);
+  const [testSyncNeedsBilling, setTestSyncNeedsBilling] = useState(false);
   const [backfillFeedback, setBackfillFeedback] = useState<string | null>(null);
+  const [backfillNeedsBilling, setBackfillNeedsBilling] = useState(false);
   const [editingCredentials, setEditingCredentials] = useState(false);
 
   const actionBusy = pendingAction !== null;
@@ -394,6 +397,7 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
     const key = entityType === "contact" ? "backfillContact" : "backfillDeal";
     setPendingAction(key);
     setBackfillFeedback(null);
+    setBackfillNeedsBilling(false);
     try {
       const res = await fetch(`/api/tenants/${tenantId}/sync/full`, {
         method: "POST",
@@ -401,10 +405,14 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
         body: JSON.stringify({ entityType }),
       });
       const text = await res.text();
-      let json: { message?: string; error?: string } = {};
+      let json: { message?: string; error?: string; billingPath?: string } = {};
       if (text) {
         try {
-          json = JSON.parse(text) as { message?: string; error?: string };
+          json = JSON.parse(text) as {
+            message?: string;
+            error?: string;
+            billingPath?: string;
+          };
         } catch {
           throw new Error(
             res.ok
@@ -415,10 +423,11 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
       }
       if (!res.ok) {
         if (res.status === 402) {
-          throw new Error(
-            json.error ??
-              "A trial or subscription is required. Open Billing to start one."
+          setBackfillNeedsBilling(true);
+          setBackfillFeedback(
+            json.error ?? "Billing is not set up yet. Start a trial to sync."
           );
+          return;
         }
         throw new Error(json.error ?? `Server error (${res.status})`);
       }
@@ -439,6 +448,7 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
     const key = entityType === "contact" ? "testContact" : "testDeal";
     setPendingAction(key);
     setTestSyncFeedback(null);
+    setTestSyncNeedsBilling(false);
     try {
       const res = await fetch(`/api/tenants/${tenantId}/sync/test`, {
         method: "POST",
@@ -446,10 +456,14 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
         body: JSON.stringify({ entityType }),
       });
       const text = await res.text();
-      let json: { message?: string; error?: string } = {};
+      let json: { message?: string; error?: string; billingPath?: string } = {};
       if (text) {
         try {
-          json = JSON.parse(text) as { message?: string; error?: string };
+          json = JSON.parse(text) as {
+            message?: string;
+            error?: string;
+            billingPath?: string;
+          };
         } catch {
           throw new Error(
             res.ok
@@ -460,10 +474,11 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
       }
       if (!res.ok) {
         if (res.status === 402) {
-          throw new Error(
-            json.error ??
-              "A trial or subscription is required. Open Billing to start one."
+          setTestSyncNeedsBilling(true);
+          setTestSyncFeedback(
+            json.error ?? "Billing is not set up yet. Start a trial to sync."
           );
+          return;
         }
         throw new Error(json.error ?? `Server error (${res.status})`);
       }
@@ -641,7 +656,9 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
           HubSpot. If you set a cutoff date below, only newer records are
           included. Watch progress in Reports.
         </p>
-        {testSyncFeedback ? (
+        {testSyncNeedsBilling ? (
+          <BillingRequiredNotice className="mt-3" />
+        ) : testSyncFeedback ? (
           <ActionFeedback
             type={isErrorMessage(testSyncFeedback) ? "error" : "success"}
             className="mt-3"
@@ -972,7 +989,9 @@ export function SettingsForm({ tenantId }: { tenantId: string }) {
               : "Sync all deals"}
           </Button>
         </div>
-        {backfillFeedback ? (
+        {backfillNeedsBilling ? (
+          <BillingRequiredNotice className="mt-3" />
+        ) : backfillFeedback ? (
           <ActionFeedback
             type={isErrorMessage(backfillFeedback) ? "error" : "success"}
             className="mt-3"

@@ -11,8 +11,7 @@ export async function requireBillingEntitlement(
   if (!entitlement.entitled) {
     return NextResponse.json(
       {
-        error:
-          "A Stripe trial or subscription is required to sync. Open Billing to start a 14-day trial (card required).",
+        error: "Billing is not set up yet. Start a trial to sync.",
         reason: entitlement.reason,
         billingPath: "/billing",
       },
