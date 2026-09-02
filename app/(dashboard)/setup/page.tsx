@@ -66,7 +66,7 @@ export default async function SetupPage() {
         {steps.map((step, i) => (
           <Card key={step.title} className="flex gap-4">
             <div
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${step.done ? "bg-hs-orange text-white" : "bg-hs-border text-hs-navy"}`}
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${step.done ? "bg-brand-clay text-white" : "bg-brand-border text-brand-ink"}`}
             >
               {step.done ? "✓" : i + 1}
             </div>

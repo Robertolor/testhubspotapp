@@ -14,8 +14,8 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-hs-canvas">
-      <header className="bg-hs-navy text-white">
+    <div className="flex min-h-0 flex-1 flex-col bg-brand-paper">
+      <header className="bg-brand-ink text-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/65">

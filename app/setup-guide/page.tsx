@@ -18,7 +18,7 @@ export default function SetupGuidePage() {
     <div className="flex flex-1 bg-slate-50 px-6 py-12">
       <article className="mx-auto max-w-2xl space-y-10 text-slate-700">
         <header className="space-y-2">
-          <p className="text-sm font-semibold uppercase tracking-wide text-hs-link">
+          <p className="text-sm font-semibold uppercase tracking-wide text-brand-link">
             Documentation
           </p>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">
@@ -36,52 +36,52 @@ export default function SetupGuidePage() {
           <p className="font-semibold text-slate-900">On this page</p>
           <ol className="mt-2 list-decimal space-y-1 pl-5">
             <li>
-              <a className="text-hs-link hover:underline" href="#overview">
+              <a className="text-brand-link hover:underline" href="#overview">
                 What the app does
               </a>
             </li>
             <li>
-              <a className="text-hs-link hover:underline" href="#requirements">
+              <a className="text-brand-link hover:underline" href="#requirements">
                 Before you start
               </a>
             </li>
             <li>
-              <a className="text-hs-link hover:underline" href="#install">
+              <a className="text-brand-link hover:underline" href="#install">
                 Install the app
               </a>
             </li>
             <li>
-              <a className="text-hs-link hover:underline" href="#mindbody">
+              <a className="text-brand-link hover:underline" href="#mindbody">
                 Connect Mindbody
               </a>
             </li>
             <li>
-              <a className="text-hs-link hover:underline" href="#configure">
+              <a className="text-brand-link hover:underline" href="#configure">
                 Configure sync
               </a>
             </li>
             <li>
-              <a className="text-hs-link hover:underline" href="#use">
+              <a className="text-brand-link hover:underline" href="#use">
                 Use the app
               </a>
             </li>
             <li>
-              <a className="text-hs-link hover:underline" href="#reports">
+              <a className="text-brand-link hover:underline" href="#reports">
                 Review sync results
               </a>
             </li>
             <li>
-              <a className="text-hs-link hover:underline" href="#disconnect">
+              <a className="text-brand-link hover:underline" href="#disconnect">
                 Disconnect Mindbody
               </a>
             </li>
             <li>
-              <a className="text-hs-link hover:underline" href="#uninstall">
+              <a className="text-brand-link hover:underline" href="#uninstall">
                 Uninstall from HubSpot
               </a>
             </li>
             <li>
-              <a className="text-hs-link hover:underline" href="#support">
+              <a className="text-brand-link hover:underline" href="#support">
                 Get help
               </a>
             </li>
@@ -152,7 +152,7 @@ export default function SetupGuidePage() {
             <li>
               Open the app listing in the{" "}
               <a
-                className="font-medium text-hs-link hover:underline"
+                className="font-medium text-brand-link hover:underline"
                 href="https://ecosystem.hubspot.com/marketplace/apps"
                 rel="noopener noreferrer"
                 target="_blank"
@@ -161,7 +161,7 @@ export default function SetupGuidePage() {
               </a>{" "}
               and click <strong>Install app</strong>, or go directly to{" "}
               <a
-                className="font-medium text-hs-link hover:underline"
+                className="font-medium text-brand-link hover:underline"
                 href="/api/oauth/hubspot"
               >
                 Install with HubSpot
@@ -369,7 +369,7 @@ export default function SetupGuidePage() {
             created or updated in HubSpot remain in your portal. The app may
             retain connection metadata and sync logs for troubleshooting until
             you request deletion — see our{" "}
-            <Link href="/privacy" className="font-medium text-hs-navy hover:underline">
+            <Link href="/privacy" className="font-medium text-brand-ink hover:underline">
               Privacy Policy
             </Link>
             .
@@ -397,7 +397,7 @@ export default function SetupGuidePage() {
           <p>
             HubSpot&apos;s help article:{" "}
             <a
-              className="font-medium text-hs-link hover:underline"
+              className="font-medium text-brand-link hover:underline"
               href="https://knowledge.hubspot.com/integrations/connect-apps-to-hubspot#uninstall-an-app"
               rel="noopener noreferrer"
               target="_blank"
@@ -421,7 +421,7 @@ export default function SetupGuidePage() {
             Email{" "}
             {email ? (
               <a
-                className="font-medium text-hs-link hover:underline"
+                className="font-medium text-brand-link hover:underline"
                 href={`mailto:${email}`}
               >
                 {email}
@@ -436,7 +436,7 @@ export default function SetupGuidePage() {
         </section>
 
         <p className="border-t border-slate-200 pt-6 text-sm">
-          <Link href="/" className="text-hs-link hover:underline">
+          <Link href="/" className="text-brand-link hover:underline">
             ← Back to home
           </Link>
         </p>

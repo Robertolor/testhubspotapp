@@ -491,7 +491,7 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
     <div className="mt-6">
       <p className="text-sm text-slate-600">
         Appointments, visits, and line items appear here after you enable them in{" "}
-        <Link href="/settings" className="font-medium text-hs-link underline">
+        <Link href="/settings" className="font-medium text-brand-link underline">
           Settings → Runtime sync controls
         </Link>
         . Mapping configuration is saved even before sync ships.
@@ -513,7 +513,7 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
             className={cn(
               "flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors",
               resolvedEntity === tab.id
-                ? "bg-white text-hs-navy shadow-sm"
+                ? "bg-white text-brand-ink shadow-sm"
                 : "text-slate-600 hover:text-slate-900"
             )}
           >
@@ -532,7 +532,7 @@ export function FieldMappingsShell({ tenantId }: { tenantId: string }) {
               className={cn(
                 "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
                 resolvedDealSource === tab.id
-                  ? "bg-white text-hs-navy shadow-sm"
+                  ? "bg-white text-brand-ink shadow-sm"
                   : "text-slate-600 hover:text-slate-900"
               )}
             >

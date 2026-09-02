@@ -15,7 +15,7 @@ export default function PrivacyPage() {
     <div className="flex flex-1 bg-slate-50 px-6 py-12">
       <article className="mx-auto max-w-2xl space-y-8 text-slate-700">
         <header className="space-y-2">
-          <p className="text-sm font-semibold uppercase tracking-wide text-hs-link">
+          <p className="text-sm font-semibold uppercase tracking-wide text-brand-link">
             Legal
           </p>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">
@@ -127,7 +127,7 @@ export default function PrivacyPage() {
             Privacy and support requests:{" "}
             {email ? (
               <a
-                className="font-medium text-hs-link hover:underline"
+                className="font-medium text-brand-link hover:underline"
                 href={`mailto:${email}`}
               >
                 {email}
@@ -141,7 +141,7 @@ export default function PrivacyPage() {
         </section>
 
         <p className="border-t border-slate-200 pt-6 text-sm">
-          <Link href="/" className="text-hs-link hover:underline">
+          <Link href="/" className="text-brand-link hover:underline">
             ← Back to home
           </Link>
         </p>

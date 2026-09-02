@@ -10,7 +10,7 @@ export function Card({
   return (
     <div
       className={cn(
-        "rounded-md border border-hs-border bg-white p-6",
+        "rounded-md border border-brand-border bg-white p-6",
         className
       )}
     >
@@ -27,7 +27,7 @@ export function CardTitle({
   className?: string;
 }) {
   return (
-    <h2 className={cn("text-lg font-semibold text-hs-navy", className)}>
+    <h2 className={cn("text-lg font-semibold text-brand-ink", className)}>
       {children}
     </h2>
   );

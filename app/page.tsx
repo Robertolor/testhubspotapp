@@ -15,15 +15,15 @@ export default async function HomePage({
   }
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center bg-hs-canvas px-6 py-16">
+    <div className="flex flex-1 flex-col items-center justify-center bg-brand-paper px-6 py-16">
       <div className="max-w-lg text-center">
-        <p className="text-sm font-semibold uppercase tracking-[0.14em] text-hs-orange">
+        <p className="text-sm font-semibold uppercase tracking-[0.14em] text-brand-clay">
           HubSpot Marketplace
         </p>
-        <h1 className="mt-3 text-4xl font-semibold tracking-tight text-hs-navy">
+        <h1 className="mt-3 text-4xl font-semibold tracking-tight text-brand-ink">
           Mindbody Sync
         </h1>
-        <p className="mt-4 text-lg text-hs-muted">
+        <p className="mt-4 text-lg text-brand-muted">
           Sync contacts and deals between Mindbody and HubSpot. Install via
           OAuth, add your Mindbody API credentials, and configure sync direction
           per client.
@@ -41,7 +41,7 @@ export default async function HomePage({
           </a>
         </div>
 
-        <ul className="mt-10 space-y-2 text-left text-sm text-hs-muted">
+        <ul className="mt-10 space-y-2 text-left text-sm text-brand-muted">
           <li>OAuth install from HubSpot</li>
           <li>Mindbody Site ID, API key, and staff login per portal</li>
           <li>Webhooks from HubSpot and Mindbody</li>

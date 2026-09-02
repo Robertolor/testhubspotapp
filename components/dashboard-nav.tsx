@@ -23,7 +23,7 @@ export function DashboardNav() {
   }
 
   return (
-    <nav className="flex w-full flex-wrap gap-1 border-b border-hs-border">
+    <nav className="flex w-full flex-wrap gap-1 border-b border-brand-border">
       {links.map((link) => (
         <Link
           key={link.href}
@@ -31,8 +31,8 @@ export function DashboardNav() {
           className={cn(
             "-mb-px border-b-2 px-3 py-2.5 text-sm transition-colors",
             isActive(link.href)
-              ? "border-hs-orange font-semibold text-hs-navy"
-              : "border-transparent font-medium text-hs-muted hover:text-hs-navy"
+              ? "border-brand-clay font-semibold text-brand-ink"
+              : "border-transparent font-medium text-brand-muted hover:text-brand-ink"
           )}
         >
           {link.label}

@@ -29,7 +29,7 @@ export function Button({
     <button
       className={cn(
         "inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold transition-colors",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hs-orange focus-visible:ring-offset-2",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-clay focus-visible:ring-offset-2",
         "disabled:pointer-events-none disabled:opacity-50",
         success &&
           variant === "primary" &&
@@ -39,11 +39,11 @@ export function Button({
           "border-green-300 bg-green-50 text-green-800 hover:bg-green-50",
         !success &&
           variant === "primary" &&
-          "bg-hs-orange text-white hover:bg-hs-orange-hover",
+          "bg-brand-clay text-white hover:bg-brand-clay-hover",
         !success &&
           variant === "secondary" &&
-          "border border-hs-border bg-white text-hs-navy hover:bg-hs-canvas",
-        !success && variant === "ghost" && "text-hs-muted hover:bg-hs-canvas hover:text-hs-navy",
+          "border border-brand-border bg-white text-brand-ink hover:bg-brand-paper",
+        !success && variant === "ghost" && "text-brand-muted hover:bg-brand-paper hover:text-brand-ink",
         className
       )}
       disabled={isDisabled}
