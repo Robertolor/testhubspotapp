@@ -15,15 +15,17 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-brand-paper">
-      <header className="bg-brand-ink text-white">
+      <header className="border-b border-brand-border bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/65">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-muted">
               Marketplace app
             </p>
-            <h1 className="text-base font-semibold">Mindbody Sync</h1>
+            <h1 className="text-base font-semibold text-brand-ink">
+              Mindbody Sync
+            </h1>
           </div>
-          <p className="text-sm text-white/75">
+          <p className="text-sm text-brand-muted">
             Portal {session.portalId}
           </p>
         </div>

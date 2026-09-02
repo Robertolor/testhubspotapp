@@ -31,7 +31,7 @@ export function DashboardNav() {
           className={cn(
             "-mb-px border-b-2 px-3 py-2.5 text-sm transition-colors",
             isActive(link.href)
-              ? "border-brand-clay font-semibold text-brand-ink"
+              ? "border-brand-accent font-semibold text-brand-ink"
               : "border-transparent font-medium text-brand-muted hover:text-brand-ink"
           )}
         >

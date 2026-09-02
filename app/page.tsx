@@ -17,7 +17,7 @@ export default async function HomePage({
   return (
     <div className="flex flex-1 flex-col items-center justify-center bg-brand-paper px-6 py-16">
       <div className="max-w-lg text-center">
-        <p className="text-sm font-semibold uppercase tracking-[0.14em] text-brand-clay">
+        <p className="text-sm font-semibold uppercase tracking-[0.14em] text-brand-accent">
           HubSpot Marketplace
         </p>
         <h1 className="mt-3 text-4xl font-semibold tracking-tight text-brand-ink">
