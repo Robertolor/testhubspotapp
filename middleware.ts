@@ -4,6 +4,7 @@ import type { NextRequest } from "next/server";
 const PUBLIC_PATHS = [
   "/",
   "/api/oauth",
+  "/api/auth",
   "/api/webhooks",
   "/api/inngest",
   "/oauth",

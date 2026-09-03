@@ -1,8 +1,19 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
+import type { NextResponse } from "next/server";
 
 const COOKIE_NAME = "mbs_session";
 const MAX_AGE_SEC = 60 * 60 * 24 * 7; // 7 days
+
+function sessionCookieOptions(maxAge: number) {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge,
+  };
+}
 
 export interface SessionPayload {
   tenantId: string;
@@ -58,13 +69,7 @@ export async function setSessionCookie(
     exp: Date.now() + MAX_AGE_SEC * 1000,
   };
   const jar = await cookies();
-  jar.set(COOKIE_NAME, encodeSession(payload), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: MAX_AGE_SEC,
-  });
+  jar.set(COOKIE_NAME, encodeSession(payload), sessionCookieOptions(MAX_AGE_SEC));
 }
 
 export async function getSession(): Promise<SessionPayload | null> {
@@ -76,11 +81,10 @@ export async function getSession(): Promise<SessionPayload | null> {
 
 export async function clearSession(): Promise<void> {
   const jar = await cookies();
-  jar.set(COOKIE_NAME, "", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 0,
-  });
+  jar.set(COOKIE_NAME, "", sessionCookieOptions(0));
+}
+
+export function attachClearedSessionCookie(response: NextResponse): NextResponse {
+  response.cookies.set(COOKIE_NAME, "", sessionCookieOptions(0));
+  return response;
 }

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { clearSession, getSession } from "@/lib/auth/session";
+import { getSession } from "@/lib/auth/session";
 import { BillingBanner } from "@/components/billing-banner";
 import { DashboardNav } from "@/components/dashboard-nav";
 import {
@@ -24,8 +24,7 @@ export default async function DashboardLayout({
       await getValidAccessToken(hubspot);
     } catch (error) {
       if (isHubspotInstallRevokedError(error)) {
-        await clearSession();
-        redirect("/?error=uninstalled");
+        redirect("/api/auth/uninstalled");
       }
     }
   }
