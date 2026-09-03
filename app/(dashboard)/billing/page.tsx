@@ -62,6 +62,8 @@ export default async function BillingPage({
   const canCancel =
     status === "trialing" || status === "active" || status === "past_due";
   const continuation = continuationCopy(display);
+  const accessUntilDate =
+    status === "trialing" ? display.trialEndsAt : display.currentPeriodEnd;
 
   return (
     <div className="space-y-6">
@@ -94,6 +96,9 @@ export default async function BillingPage({
           <BillingPeriodEndButtons
             canCancel={canCancel}
             cancelAtPeriodEnd={display.cancelAtPeriodEnd}
+            accessUntil={
+              accessUntilDate ? formatLongDate(accessUntilDate) : null
+            }
           />
         </div>
 

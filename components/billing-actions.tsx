@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ActionFeedback } from "@/components/ui/action-feedback";
 
@@ -60,14 +60,28 @@ export function StripePortalButton({
 export function BillingPeriodEndButtons({
   canCancel,
   cancelAtPeriodEnd,
+  accessUntil,
 }: {
   canCancel: boolean;
   cancelAtPeriodEnd: boolean;
+  accessUntil?: string | null;
 }) {
   const [pending, setPending] = useState<"cancel_at_period_end" | "resume" | null>(
     null
   );
+  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!confirming) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      setConfirming(false);
+      setError(null);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [confirming]);
 
   async function updateSubscription(action: "cancel_at_period_end" | "resume") {
     setError(null);
@@ -91,10 +105,10 @@ export function BillingPeriodEndButtons({
 
   if (!canCancel) return null;
 
-  return (
-    <span className="inline-flex flex-col items-start gap-2">
-      {error ? <ActionFeedback type="error">{error}</ActionFeedback> : null}
-      {cancelAtPeriodEnd ? (
+  if (cancelAtPeriodEnd) {
+    return (
+      <span className="inline-flex flex-col items-end gap-2">
+        {error ? <ActionFeedback type="error">{error}</ActionFeedback> : null}
         <Button
           type="button"
           variant="secondary"
@@ -104,17 +118,76 @@ export function BillingPeriodEndButtons({
         >
           Keep my subscription
         </Button>
-      ) : (
-        <Button
-          type="button"
-          variant="secondary"
-          loading={pending === "cancel_at_period_end"}
-          disabled={pending !== null}
-          onClick={() => updateSubscription("cancel_at_period_end")}
+      </span>
+    );
+  }
+
+  if (confirming) {
+    return (
+      <div
+        role="dialog"
+        aria-labelledby="cancel-subscription-title"
+        aria-describedby="cancel-subscription-copy"
+        className="w-full max-w-sm rounded-md border border-brand-border bg-brand-paper p-4 text-left"
+      >
+        <p
+          id="cancel-subscription-title"
+          className="text-sm font-semibold text-brand-ink"
         >
-          Cancel subscription
-        </Button>
-      )}
+          Cancel this subscription?
+        </p>
+        <p
+          id="cancel-subscription-copy"
+          className="mt-1 text-sm text-slate-600"
+        >
+          You will keep access until{" "}
+          {accessUntil ?? "the end of this trial or paid period"}. You will not
+          be charged after that. You can undo this on Billing before then.
+        </p>
+        {error ? (
+          <div className="mt-2">
+            <ActionFeedback type="error">{error}</ActionFeedback>
+          </div>
+        ) : null}
+        <div className="mt-3 flex flex-wrap justify-end gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={pending !== null}
+            onClick={() => {
+              setConfirming(false);
+              setError(null);
+            }}
+          >
+            Never mind
+          </Button>
+          <Button
+            type="button"
+            loading={pending === "cancel_at_period_end"}
+            disabled={pending !== null}
+            onClick={() => updateSubscription("cancel_at_period_end")}
+          >
+            Yes, cancel
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <span className="inline-flex flex-col items-end gap-2">
+      {error ? <ActionFeedback type="error">{error}</ActionFeedback> : null}
+      <Button
+        type="button"
+        variant="secondary"
+        disabled={pending !== null}
+        onClick={() => {
+          setError(null);
+          setConfirming(true);
+        }}
+      >
+        Cancel subscription
+      </Button>
     </span>
   );
 }
