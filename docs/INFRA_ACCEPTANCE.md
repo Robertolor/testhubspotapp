@@ -28,7 +28,7 @@ This document defines **what we intended to build**, **what is live today**, and
 | `TOKEN_ENCRYPTION_KEY` | Yes | Set |
 | `SESSION_SECRET` | Yes | Set |
 | `MINDBODY_DEVELOPER_API_KEY` | Yes | Set |
-| `NEXT_PUBLIC_SUPPORT_EMAIL` | Yes | `roberto@methoddata.com` |
+| `NEXT_PUBLIC_SUPPORT_EMAIL` | Yes | `integrations@methoddata.com` |
 | `SQS_QUEUE_URL` | No until cutover | **Unset** until real-tenant queue test |
 | `AWS_REGION` | If SQS enabled | `us-east-1` when cutover |
 

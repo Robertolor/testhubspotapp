@@ -8,13 +8,13 @@ Privacy policy URL: `https://testhubspotapp.vercel.app/privacy`
 Production / listing address:
 
 ```text
-roberto@methoddata.com
+integrations@methoddata.com
 ```
 
 Set in Vercel (Production + Preview):
 
 ```text
-NEXT_PUBLIC_SUPPORT_EMAIL=roberto@methoddata.com
+NEXT_PUBLIC_SUPPORT_EMAIL=integrations@methoddata.com
 ```
 
 Then redeploy. The privacy page reads this value.

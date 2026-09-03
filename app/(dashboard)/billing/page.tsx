@@ -5,6 +5,8 @@ import {
 } from "@/components/billing-actions";
 import { Card, CardTitle } from "@/components/ui/card";
 import { hasYearlyPrice, isBillingEnforcementEnabled } from "@/lib/billing/config";
+import { shouldIncludeCheckoutTrial } from "@/lib/billing/checkout";
+import { getSupportEmail } from "@/lib/support";
 import { loadBillingDisplay } from "@/lib/billing/display";
 import { isStripeStatusEntitled } from "@/lib/billing/entitlement";
 import {
@@ -53,7 +55,9 @@ export default async function BillingPage({
   ]);
 
   const status = display.stripeStatus;
-  const canStartTrial = !isStripeStatusEntitled(status);
+  const canCheckout = !isStripeStatusEntitled(status);
+  const includeTrial = shouldIncludeCheckoutTrial(status);
+  const supportEmail = getSupportEmail();
   const canCancel =
     status === "trialing" || status === "active" || status === "past_due";
   const continuation = continuationCopy(display);
@@ -131,7 +135,8 @@ export default async function BillingPage({
         ) : null}
 
         <BillingCheckoutButtons
-          canStartTrial={canStartTrial}
+          canCheckout={canCheckout}
+          includeTrial={includeTrial}
           showYearly={hasYearlyPrice()}
         />
       </Card>
@@ -217,6 +222,16 @@ export default async function BillingPage({
           </Card>
         </>
       ) : null}
+
+      <p className="text-sm text-slate-600">
+        Billing questions:{" "}
+        <a
+          href={`mailto:${supportEmail}`}
+          className="font-medium text-brand-link hover:underline"
+        >
+          {supportEmail}
+        </a>
+      </p>
 
       {!isBillingEnforcementEnabled() ? (
         <p className="text-xs text-slate-400">

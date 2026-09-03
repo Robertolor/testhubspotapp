@@ -58,10 +58,12 @@ export function StripePortalButton({
 }
 
 export function BillingCheckoutButtons({
-  canStartTrial,
+  canCheckout,
+  includeTrial,
   showYearly,
 }: {
-  canStartTrial: boolean;
+  canCheckout: boolean;
+  includeTrial: boolean;
   showYearly: boolean;
 }) {
   const [pending, setPending] = useState<"monthly" | "yearly" | null>(null);
@@ -87,7 +89,7 @@ export function BillingCheckoutButtons({
     }
   }
 
-  if (!canStartTrial) return null;
+  if (!canCheckout) return null;
 
   return (
     <div className="space-y-3">
@@ -98,7 +100,7 @@ export function BillingCheckoutButtons({
           disabled={pending !== null}
           onClick={() => startCheckout("monthly")}
         >
-          Start 14-day trial
+          {includeTrial ? "Start 14-day trial" : "Subscribe"}
         </Button>
         {showYearly ? (
           <Button

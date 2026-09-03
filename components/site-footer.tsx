@@ -28,28 +28,20 @@ export function SiteFooter() {
               {link.label}
             </Link>
           ))}
-          {supportEmail ? (
-            <a
-              href={`mailto:${supportEmail}`}
-              className="text-brand-link hover:underline"
-            >
-              Support
-            </a>
-          ) : null}
-        </nav>
-
-        {supportEmail ? (
           <a
             href={`mailto:${supportEmail}`}
-            className="text-brand-muted hover:text-brand-ink hover:underline sm:text-right"
+            className="text-brand-link hover:underline"
           >
-            {supportEmail}
+            Support
           </a>
-        ) : (
-          <p className="text-xs text-slate-400 sm:text-right">
-            Support email configured at deploy
-          </p>
-        )}
+        </nav>
+
+        <a
+          href={`mailto:${supportEmail}`}
+          className="text-brand-muted hover:text-brand-ink hover:underline sm:text-right"
+        >
+          {supportEmail}
+        </a>
       </div>
     </footer>
   );
