@@ -21,7 +21,7 @@ export default function TermsPage() {
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">
             Terms of Service
           </h1>
-          <p className="text-sm text-slate-500">Last updated: August 14, 2026</p>
+          <p className="text-sm text-slate-500">Last updated: September 2, 2026</p>
         </header>
 
         <section className="space-y-3">
@@ -179,10 +179,16 @@ export default function TermsPage() {
         <section className="space-y-3">
           <h2 className="text-lg font-semibold text-slate-900">Pricing</h2>
           <p>
-            During the current release period, the App may be offered at no
-            charge or on a free beta basis. We may introduce paid plans in the
-            future with advance notice. If pricing changes, continued use after
-            the effective date may require acceptance of new pricing terms.
+            The App is billed per HubSpot portal through Stripe. A payment
+            method is required to start a trial. After the trial, Stripe charges
+            the saved card unless you cancel or uninstall.
+          </p>
+          <p>
+            If you cancel your subscription in the App and leave the App
+            installed, you keep access until the end of the then-current trial
+            or paid period. If you uninstall the App from HubSpot, we cancel
+            your Stripe subscription immediately and stop sync immediately. You
+            do not keep access for the remainder of that period.
           </p>
         </section>
 
@@ -193,6 +199,8 @@ export default function TermsPage() {
           <p>
             You may stop using the App at any time by uninstalling it from your
             HubSpot account and removing Mindbody credentials in Settings.
+            Uninstalling from HubSpot cancels Stripe billing immediately and
+            stops sync immediately.
           </p>
           <p>
             We may suspend or terminate access if you violate these Terms, if

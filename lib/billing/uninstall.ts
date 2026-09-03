@@ -1,6 +1,9 @@
 import { getHubspotAccountByPortal } from "@/lib/hubspot/tokens";
 import { getStripe } from "./stripe";
-import { getBillingSubscriptionRow } from "./subscription";
+import {
+  getBillingSubscriptionRow,
+  upsertBillingFromSubscription,
+} from "./subscription";
 
 export function isHubspotUninstallEvent(event: Record<string, unknown>): boolean {
   const type = String(
@@ -9,6 +12,18 @@ export function isHubspotUninstallEvent(event: Record<string, unknown>): boolean
   return type.includes("uninstall");
 }
 
+async function persistSubscriptionStatus(
+  tenantId: string,
+  subscriptionId: string
+): Promise<void> {
+  const subscription = await getStripe().subscriptions.retrieve(subscriptionId);
+  await upsertBillingFromSubscription({ tenantId, subscription });
+}
+
+/**
+ * HubSpot uninstall: cancel Stripe immediately and write canceled status so
+ * sync APIs and the worker gate stop in the same request (no wait for Stripe webhooks).
+ */
 export async function cancelStripeForPortal(
   portalId: number
 ): Promise<{ canceled: boolean }> {
@@ -20,7 +35,13 @@ export async function cancelStripeForPortal(
   if (row.status === "canceled") return { canceled: false };
 
   try {
-    await getStripe().subscriptions.cancel(row.stripe_subscription_id);
+    const subscription = await getStripe().subscriptions.cancel(
+      row.stripe_subscription_id
+    );
+    await upsertBillingFromSubscription({
+      tenantId: account.tenant_id,
+      subscription,
+    });
     return { canceled: true };
   } catch (error) {
     const message = error instanceof Error ? error.message.toLowerCase() : "";
@@ -28,6 +49,14 @@ export async function cancelStripeForPortal(
       message.includes("no such subscription") ||
       message.includes("canceled")
     ) {
+      try {
+        await persistSubscriptionStatus(
+          account.tenant_id,
+          row.stripe_subscription_id
+        );
+      } catch {
+        // Stripe already gone; local row may still update from a later webhook.
+      }
       return { canceled: false };
     }
     throw error;

@@ -63,7 +63,9 @@ export default async function BillingPage({
       <div>
         <h2 className="text-2xl font-semibold text-slate-900">Billing</h2>
         <p className="mt-1 text-slate-600">
-          This HubSpot portal is billed through Stripe.
+          This HubSpot portal is billed through Stripe. Cancel here to keep the
+          app installed through the end of the current trial or paid period.
+          Uninstall from HubSpot to stop billing and sync immediately.
         </p>
       </div>
 
@@ -113,7 +115,8 @@ export default async function BillingPage({
           <p className="text-sm text-slate-700">
             You do not have a trial or subscription yet. A card is required.
             You will not be charged today. After 14 days Stripe charges the
-            card unless you cancel or uninstall the app.
+            card unless you cancel. Uninstalling from HubSpot stops billing
+            and sync immediately.
           </p>
         )}
 

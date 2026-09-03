@@ -1,7 +1,7 @@
 import { decryptSecret, encryptSecret } from "@/lib/crypto/secrets";
 import { getSupabase } from "@/lib/db/client";
 import type { HubspotAccount } from "@/lib/db/types";
-import { refreshHubspotToken } from "@/lib/hubspot/oauth";
+import { getHubspotTokenInfo, refreshHubspotToken } from "@/lib/hubspot/oauth";
 
 export async function getHubspotAccountByPortal(
   portalId: number
@@ -29,6 +29,42 @@ export async function getHubspotAccountByTenant(
   return data as HubspotAccount | null;
 }
 
+async function isAccessTokenActive(accessToken: string): Promise<boolean> {
+  try {
+    await getHubspotTokenInfo(accessToken);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export class HubspotInstallRevokedError extends Error {
+  readonly code = "HUBSPOT_INSTALL_REVOKED";
+
+  constructor() {
+    super("HubSpot app was uninstalled");
+    this.name = "HubspotInstallRevokedError";
+  }
+}
+
+export function isHubspotInstallRevokedError(error: unknown): boolean {
+  return (
+    error instanceof HubspotInstallRevokedError ||
+    (error instanceof Error &&
+      (error.name === "HubspotInstallRevokedError" ||
+        ("code" in error && error.code === "HUBSPOT_INSTALL_REVOKED")))
+  );
+}
+
+async function cancelBillingAfterHubspotUninstall(portalId: number): Promise<void> {
+  const { cancelStripeForPortal } = await import("@/lib/billing/uninstall");
+  await cancelStripeForPortal(portalId);
+}
+
+/**
+ * HubSpot has no app.uninstall webhook. We treat a revoked OAuth token as uninstall
+ * and cancel Stripe immediately.
+ */
 export async function getValidAccessToken(
   account: HubspotAccount
 ): Promise<string> {
@@ -36,25 +72,46 @@ export async function getValidAccessToken(
   const bufferMs = 60_000;
 
   if (expiresAt > Date.now() + bufferMs) {
-    return decryptSecret(account.access_token_encrypted);
+    const current = decryptSecret(account.access_token_encrypted);
+    if (await isAccessTokenActive(current)) {
+      return current;
+    }
   }
 
   const refreshToken = decryptSecret(account.refresh_token_encrypted);
-  const tokens = await refreshHubspotToken(refreshToken);
-  const expires = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
+  try {
+    const tokens = await refreshHubspotToken(refreshToken);
+    const expires = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
 
-  const { error } = await getSupabase()
-    .from("hubspot_accounts")
-    .update({
-      access_token_encrypted: encryptSecret(tokens.access_token),
-      refresh_token_encrypted: encryptSecret(
-        tokens.refresh_token || refreshToken
-      ),
-      expires_at: expires,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", account.id);
+    const { error } = await getSupabase()
+      .from("hubspot_accounts")
+      .update({
+        access_token_encrypted: encryptSecret(tokens.access_token),
+        refresh_token_encrypted: encryptSecret(
+          tokens.refresh_token || refreshToken
+        ),
+        expires_at: expires,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", account.id);
 
-  if (error) throw error;
-  return tokens.access_token;
+    if (error) throw error;
+    return tokens.access_token;
+  } catch (error) {
+    if (isRevokedHubspotRefresh(error)) {
+      await cancelBillingAfterHubspotUninstall(account.portal_id);
+      throw new HubspotInstallRevokedError();
+    }
+    throw error;
+  }
+}
+
+export function isRevokedHubspotRefresh(error: unknown): boolean {
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+  return (
+    message.includes("bad_refresh_token") ||
+    message.includes("invalid_grant") ||
+    message.includes("invalid refresh token") ||
+    message.includes("missing or invalid refresh token")
+  );
 }

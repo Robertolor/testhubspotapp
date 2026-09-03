@@ -15,7 +15,8 @@ export async function BillingBanner({ tenantId }: { tenantId: string }) {
     return (
       <div className="mb-6 rounded-md border border-brand-border bg-white px-4 py-3 text-sm text-brand-ink">
         Trial until {ends}. After that your card is charged unless you cancel
-        or uninstall.{" "}
+        on Billing. Uninstalling from HubSpot stops billing and sync
+        immediately.{" "}
         <Link href="/billing" className="font-medium underline">
           Billing
         </Link>

@@ -4,6 +4,7 @@ import { listDealPipelines } from "@/lib/hubspot/pipelines";
 import {
   getHubspotAccountByTenant,
   getValidAccessToken,
+  isHubspotInstallRevokedError,
 } from "@/lib/hubspot/tokens";
 
 export async function GET(
@@ -30,11 +31,14 @@ export async function GET(
     return NextResponse.json({ pipelines });
   } catch (e) {
     console.error("[hubspot/pipelines]", e);
+    if (isHubspotInstallRevokedError(e)) {
+      return NextResponse.json(
+        { error: "HubSpot was uninstalled. Install the app again." },
+        { status: 401 }
+      );
+    }
     return NextResponse.json(
-      {
-        error:
-          e instanceof Error ? e.message : "Failed to load HubSpot pipelines",
-      },
+      { error: "Could not load HubSpot pipelines." },
       { status: 502 }
     );
   }

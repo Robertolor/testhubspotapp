@@ -29,11 +29,16 @@ export default async function HomePage({
           per client.
         </p>
 
-        {params.error && (
+        {params.error === "uninstalled" ? (
+          <p className="mt-4 rounded-md border border-brand-border bg-white px-4 py-3 text-sm text-brand-ink">
+            The app was uninstalled from HubSpot. Billing is stopped. Install
+            again to reconnect this portal.
+          </p>
+        ) : params.error ? (
           <p className="mt-4 rounded-md bg-red-50 px-4 py-2 text-sm text-red-700">
             Installation error: {params.error}
           </p>
-        )}
+        ) : null}
 
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <a href="/api/oauth/hubspot">

@@ -16,14 +16,34 @@ export const HUBSPOT_SCOPES = [
   "crm.schemas.line_items.read",
 ].join(" ");
 
-export const HUBSPOT_WEBHOOK_EVENTS = [
-  "contact.creation",
-  "contact.propertyChange",
-  "contact.deletion",
-  "deal.creation",
-  "deal.propertyChange",
-  "deal.deletion",
-] as const;
+/** CRM webhook subscriptions. HubSpot has no app.uninstall event type. */
+export const HUBSPOT_WEBHOOK_SUBSCRIPTIONS: Array<{
+  eventType: string;
+  propertyName?: string;
+}> = [
+  { eventType: "contact.creation" },
+  { eventType: "contact.deletion" },
+  { eventType: "contact.privacyDeletion" },
+  { eventType: "contact.propertyChange", propertyName: "email" },
+  { eventType: "contact.propertyChange", propertyName: "firstname" },
+  { eventType: "contact.propertyChange", propertyName: "lastname" },
+  { eventType: "contact.propertyChange", propertyName: "phone" },
+  { eventType: "contact.propertyChange", propertyName: "mindbody_client_id" },
+  { eventType: "deal.creation" },
+  { eventType: "deal.deletion" },
+  { eventType: "deal.propertyChange", propertyName: "dealname" },
+  { eventType: "deal.propertyChange", propertyName: "amount" },
+  { eventType: "deal.propertyChange", propertyName: "closedate" },
+  { eventType: "deal.propertyChange", propertyName: "dealstage" },
+  { eventType: "deal.propertyChange", propertyName: "deal_source" },
+  { eventType: "line_item.creation" },
+  { eventType: "line_item.deletion" },
+];
+
+/** @deprecated Use HUBSPOT_WEBHOOK_SUBSCRIPTIONS. Kept for event-type checks. */
+export const HUBSPOT_WEBHOOK_EVENTS = HUBSPOT_WEBHOOK_SUBSCRIPTIONS.map(
+  (item) => item.eventType
+);
 
 export function getHubspotRedirectUri(): string {
   return (

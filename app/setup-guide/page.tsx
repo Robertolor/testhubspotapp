@@ -24,7 +24,7 @@ export default function SetupGuidePage() {
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">
             Setup guide
           </h1>
-          <p className="text-sm text-slate-500">Last updated: August 14, 2026</p>
+          <p className="text-sm text-slate-500">Last updated: September 2, 2026</p>
           <p className="text-slate-600">
             This guide explains how to install, configure, use, disconnect, and
             uninstall <strong>Mindbody ↔ HubSpot Sync</strong> after installing
@@ -382,7 +382,14 @@ export default function SetupGuidePage() {
           </h2>
           <p>
             To fully remove the integration from your HubSpot account, uninstall
-            the app from HubSpot. This revokes OAuth access to your portal.
+            the app from HubSpot. This revokes OAuth access to your portal,
+            cancels Stripe billing immediately, and stops sync immediately. You
+            do not keep the rest of a paid period or trial after uninstall.
+          </p>
+          <p>
+            If you only want to stop paying and keep the app installed, cancel
+            from the Billing page instead. Access then continues until the end
+            of the current trial or paid period.
           </p>
           <ol className="list-decimal space-y-2 pl-5">
             <li>
@@ -407,11 +414,11 @@ export default function SetupGuidePage() {
             .
           </p>
           <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-            <strong>What happens to your data:</strong> Uninstalling revokes
-            HubSpot API access immediately. Existing HubSpot contacts and deals
-            are not automatically deleted. To request deletion of data stored
-            by the app (tokens, Mindbody credentials, sync logs), contact
-            support after uninstalling.
+            <strong>What happens when you uninstall:</strong> HubSpot access,
+            Stripe billing, and sync all stop immediately. Existing HubSpot
+            contacts and deals are not automatically deleted. To request
+            deletion of data stored by the app (tokens, Mindbody credentials,
+            sync logs), contact support after uninstalling.
           </p>
         </section>
 

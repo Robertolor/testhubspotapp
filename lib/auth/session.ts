@@ -76,5 +76,11 @@ export async function getSession(): Promise<SessionPayload | null> {
 
 export async function clearSession(): Promise<void> {
   const jar = await cookies();
-  jar.delete(COOKIE_NAME);
+  jar.set(COOKIE_NAME, "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+  });
 }

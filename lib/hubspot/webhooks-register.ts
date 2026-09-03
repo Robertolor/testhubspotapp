@@ -1,34 +1,87 @@
-import { getHubspotAppId } from "@/lib/hubspot/config";
-import { HUBSPOT_WEBHOOK_EVENTS } from "@/lib/hubspot/config";
-import { getAppUrl } from "@/lib/utils";
+import {
+  getHubspotAppId,
+  HUBSPOT_WEBHOOK_SUBSCRIPTIONS,
+} from "@/lib/hubspot/config";
+
+type SubscriptionRow = {
+  id?: string | number;
+  eventType: string;
+  propertyName?: string | null;
+  active: boolean;
+};
+
+function subscriptionKey(eventType: string, propertyName?: string | null): string {
+  return `${eventType}::${propertyName ?? ""}`;
+}
+
+function parseSubscriptionList(payload: unknown): SubscriptionRow[] {
+  if (Array.isArray(payload)) return payload as SubscriptionRow[];
+  if (payload && typeof payload === "object" && "results" in payload) {
+    const results = (payload as { results?: SubscriptionRow[] }).results;
+    return results ?? [];
+  }
+  return [];
+}
+
+export async function listHubspotWebhookSubscriptions(
+  accessToken: string
+): Promise<{ ok: boolean; status: number; subscriptions: SubscriptionRow[]; body: string }> {
+  const appId = getHubspotAppId();
+  const res = await fetch(
+    `https://api.hubapi.com/webhooks/v3/${appId}/subscriptions`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  const body = await res.text();
+  if (!res.ok) {
+    return { ok: false, status: res.status, subscriptions: [], body };
+  }
+  try {
+    return {
+      ok: true,
+      status: res.status,
+      subscriptions: parseSubscriptionList(JSON.parse(body) as unknown),
+      body,
+    };
+  } catch {
+    return { ok: false, status: res.status, subscriptions: [], body };
+  }
+}
 
 export async function ensureHubspotWebhookSubscriptions(
   accessToken: string,
   portalId: number
-): Promise<void> {
+): Promise<{ created: string[]; skipped: string[]; failed: string[] }> {
   const appId = getHubspotAppId();
-  const targetUrl = `${getAppUrl()}/api/webhooks/hubspot`;
+  const listed = await listHubspotWebhookSubscriptions(accessToken);
+  const created: string[] = [];
+  const skipped: string[] = [];
+  const failed: string[] = [];
 
-  const listRes = await fetch(
-    `https://api.hubapi.com/webhooks/v3/${appId}/subscriptions`,
-    {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    }
-  );
-
-  let existing: { id: string; eventType: string; active: boolean }[] = [];
-  if (listRes.ok) {
-    const listData = (await listRes.json()) as {
-      results?: { id: string; eventType: string; active: boolean }[];
+  if (!listed.ok) {
+    console.warn(
+      `HubSpot webhook list for portal ${portalId}: ${listed.status} ${listed.body}`
+    );
+    return {
+      created,
+      skipped,
+      failed: HUBSPOT_WEBHOOK_SUBSCRIPTIONS.map((item) =>
+        subscriptionKey(item.eventType, item.propertyName)
+      ),
     };
-    existing = listData.results ?? [];
   }
 
-  for (const eventType of HUBSPOT_WEBHOOK_EVENTS) {
-    const hasActive = existing.some(
-      (s) => s.eventType === eventType && s.active
-    );
-    if (hasActive) continue;
+  const existingKeys = new Set(
+    listed.subscriptions
+      .filter((row) => row.active)
+      .map((row) => subscriptionKey(row.eventType, row.propertyName))
+  );
+
+  for (const item of HUBSPOT_WEBHOOK_SUBSCRIPTIONS) {
+    const key = subscriptionKey(item.eventType, item.propertyName);
+    if (existingKeys.has(key)) {
+      skipped.push(key);
+      continue;
+    }
 
     const res = await fetch(
       `https://api.hubapi.com/webhooks/v3/${appId}/subscriptions`,
@@ -39,18 +92,23 @@ export async function ensureHubspotWebhookSubscriptions(
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          eventType,
+          eventType: item.eventType,
           active: true,
-          webhookUrl: targetUrl,
+          ...(item.propertyName ? { propertyName: item.propertyName } : {}),
         }),
       }
     );
 
-    if (!res.ok) {
-      const text = await res.text();
-      console.warn(
-        `HubSpot webhook subscribe ${eventType} for portal ${portalId}: ${text}`
-      );
+    if (res.ok) {
+      created.push(key);
+      continue;
     }
+    const text = await res.text();
+    failed.push(`${key} (${res.status})`);
+    console.warn(
+      `HubSpot webhook subscribe ${key} for portal ${portalId}: ${text}`
+    );
   }
+
+  return { created, skipped, failed };
 }

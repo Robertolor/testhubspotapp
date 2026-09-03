@@ -1,7 +1,12 @@
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/auth/session";
+import { clearSession, getSession } from "@/lib/auth/session";
 import { BillingBanner } from "@/components/billing-banner";
 import { DashboardNav } from "@/components/dashboard-nav";
+import {
+  getHubspotAccountByTenant,
+  getValidAccessToken,
+  isHubspotInstallRevokedError,
+} from "@/lib/hubspot/tokens";
 
 export default async function DashboardLayout({
   children,
@@ -11,6 +16,18 @@ export default async function DashboardLayout({
   const session = await getSession();
   if (!session) {
     redirect("/");
+  }
+
+  const hubspot = await getHubspotAccountByTenant(session.tenantId);
+  if (hubspot) {
+    try {
+      await getValidAccessToken(hubspot);
+    } catch (error) {
+      if (isHubspotInstallRevokedError(error)) {
+        await clearSession();
+        redirect("/?error=uninstalled");
+      }
+    }
   }
 
   return (

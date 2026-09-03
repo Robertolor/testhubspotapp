@@ -179,6 +179,12 @@ function runStaticChecks(): void {
   }
   ok("HubSpot uninstall cancels Stripe");
 
+  const uninstallTs = readRepoFile("lib/billing/uninstall.ts");
+  if (!uninstallTs.includes("upsertBillingFromSubscription")) {
+    fail("Uninstall must persist canceled Stripe status so sync stops immediately");
+  }
+  ok("HubSpot uninstall blocks entitlement immediately");
+
   for (const doc of [
     "docs/INFRA_ACCEPTANCE.md",
     "infra/sam/README.md",
