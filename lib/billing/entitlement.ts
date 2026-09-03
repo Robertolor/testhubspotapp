@@ -31,6 +31,8 @@ export interface TenantBillingSnapshot {
   tenantStatus: string;
   trialEndsAt: string | null;
   subscriptionStatus: string | null;
+  cancelAtPeriodEnd: boolean;
+  currentPeriodEnd: string | null;
 }
 
 /**
@@ -78,7 +80,7 @@ export async function loadTenantBillingSnapshot(
 
   const { data: sub, error: subError } = await getSupabase()
     .from("billing_subscriptions")
-    .select("status")
+    .select("status, cancel_at_period_end, current_period_end")
     .eq("tenant_id", tenantId)
     .maybeSingle();
 
@@ -89,6 +91,8 @@ export async function loadTenantBillingSnapshot(
     tenantStatus: tenant.status as string,
     trialEndsAt: (tenant.trial_ends_at as string | null) ?? null,
     subscriptionStatus: (sub?.status as string | null) ?? null,
+    cancelAtPeriodEnd: Boolean(sub?.cancel_at_period_end),
+    currentPeriodEnd: (sub?.current_period_end as string | null) ?? null,
   };
 }
 

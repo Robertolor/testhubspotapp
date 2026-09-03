@@ -31,8 +31,9 @@ export default async function HomePage({
 
         {params.error === "uninstalled" ? (
           <p className="mt-4 rounded-md border border-brand-border bg-white px-4 py-3 text-sm text-brand-ink">
-            The app was uninstalled from HubSpot. Billing is stopped. Install
-            again to reconnect this portal.
+            The app was uninstalled from HubSpot. Sync is off. If you still
+            have time left on this portal&apos;s plan, install again to keep
+            using it until that date.
           </p>
         ) : params.error ? (
           <p className="mt-4 rounded-md bg-red-50 px-4 py-2 text-sm text-red-700">

@@ -10,6 +10,7 @@ import {
 import { ensureHubspotWebhookSubscriptions } from "@/lib/hubspot/webhooks-register";
 import { bootstrapHubspotProperties } from "@/lib/hubspot/properties";
 import { seedDefaultFieldMappings } from "@/lib/sync/field-mappings";
+import { resumeStripeIfScheduled } from "@/lib/billing/lifecycle";
 import { getAppUrl } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -116,6 +117,12 @@ export async function GET(request: NextRequest) {
     .from("tenants")
     .update({ status: "active", updated_at: new Date().toISOString() })
     .eq("id", tenantId);
+
+  try {
+    await resumeStripeIfScheduled(tenantId);
+  } catch (e) {
+    console.warn("Resume Stripe after HubSpot reinstall:", e);
+  }
 
   try {
     await bootstrapHubspotProperties(tokens.access_token);

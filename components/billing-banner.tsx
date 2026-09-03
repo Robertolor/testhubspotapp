@@ -8,6 +8,20 @@ export async function BillingBanner({ tenantId }: { tenantId: string }) {
   const entitlement = await getTenantEntitlement(tenantId);
   if (!entitlement) return null;
 
+  if (entitlement.snapshot.cancelAtPeriodEnd) {
+    const ends = entitlement.snapshot.currentPeriodEnd
+      ? new Date(entitlement.snapshot.currentPeriodEnd).toLocaleDateString()
+      : "the end of this period";
+    return (
+      <div className="mb-6 rounded-md border border-brand-border bg-white px-4 py-3 text-sm text-brand-ink">
+        This plan is set to end on {ends}. You keep access until then.{" "}
+        <Link href="/billing" className="font-medium underline">
+          Billing
+        </Link>
+      </div>
+    );
+  }
+
   if (entitlement.reason === "trial") {
     const ends = entitlement.snapshot.trialEndsAt
       ? new Date(entitlement.snapshot.trialEndsAt).toLocaleDateString()
@@ -15,8 +29,8 @@ export async function BillingBanner({ tenantId }: { tenantId: string }) {
     return (
       <div className="mb-6 rounded-md border border-brand-border bg-white px-4 py-3 text-sm text-brand-ink">
         Trial until {ends}. After that your card is charged unless you cancel
-        on Billing. Uninstalling from HubSpot stops billing and sync
-        immediately.{" "}
+        on Billing. Uninstalling from HubSpot turns off sync; reinstall before
+        the period ends to keep this plan.{" "}
         <Link href="/billing" className="font-medium underline">
           Billing
         </Link>

@@ -48,7 +48,7 @@ export default async function SetupPage() {
       ),
       title: "Start billing trial",
       detail:
-        "Add a card to start 14 days free. After that Stripe charges the card unless you cancel. Uninstalling from HubSpot stops billing and sync immediately.",
+        "Add a card to start 14 days free. After that Stripe charges the card unless you cancel. Uninstalling from HubSpot turns off sync; reinstall before the period ends to keep this plan.",
     },
   ];
 

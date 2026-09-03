@@ -382,9 +382,10 @@ export default function SetupGuidePage() {
           </h2>
           <p>
             To fully remove the integration from your HubSpot account, uninstall
-            the app from HubSpot. This revokes OAuth access to your portal,
-            cancels Stripe billing immediately, and stops sync immediately. You
-            do not keep the rest of a paid period or trial after uninstall.
+            the app from HubSpot. This revokes OAuth access to your portal and
+            stops sync. Stripe keeps the current trial or paid period and does
+            not charge again after it ends. Reinstall the same portal before
+            that date to keep the same plan.
           </p>
           <p>
             If you only want to stop paying and keep the app installed, cancel
@@ -414,11 +415,12 @@ export default function SetupGuidePage() {
             .
           </p>
           <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-            <strong>What happens when you uninstall:</strong> HubSpot access,
-            Stripe billing, and sync all stop immediately. Existing HubSpot
-            contacts and deals are not automatically deleted. To request
-            deletion of data stored by the app (tokens, Mindbody credentials,
-            sync logs), contact support after uninstalling.
+            <strong>What happens when you uninstall:</strong> HubSpot access
+            and sync stop. Stripe does not charge again after the current
+            trial or paid period. Existing HubSpot contacts and deals are not
+            automatically deleted. To request deletion of data stored by the
+            app (tokens, Mindbody credentials, sync logs), contact support
+            after uninstalling.
           </p>
         </section>
 

@@ -175,15 +175,28 @@ function runStaticChecks(): void {
 
   const hubspotWebhook = readRepoFile("app/api/webhooks/hubspot/route.ts");
   if (!hubspotWebhook.includes("cancelStripeForPortal")) {
-    fail("HubSpot webhook must cancel Stripe on uninstall");
+    fail("HubSpot webhook must schedule Stripe cancel on uninstall");
   }
-  ok("HubSpot uninstall cancels Stripe");
+  ok("HubSpot uninstall notifies Stripe");
 
   const uninstallTs = readRepoFile("lib/billing/uninstall.ts");
-  if (!uninstallTs.includes("upsertBillingFromSubscription")) {
-    fail("Uninstall must persist canceled Stripe status so sync stops immediately");
+  const lifecycleTs = readRepoFile("lib/billing/lifecycle.ts");
+  if (!uninstallTs.includes("scheduleStripeCancelForTenant")) {
+    fail("Uninstall must schedule Stripe cancel at period end");
   }
-  ok("HubSpot uninstall blocks entitlement immediately");
+  if (!lifecycleTs.includes("cancel_at_period_end")) {
+    fail("Billing lifecycle must use Stripe cancel_at_period_end");
+  }
+  if (!lifecycleTs.includes("resumeStripeIfScheduled")) {
+    fail("Reinstall must be able to resume a scheduled Stripe cancel");
+  }
+  ok("HubSpot uninstall schedules Stripe cancel at period end");
+
+  const termsTs = readRepoFile("app/terms/page.tsx");
+  if (termsTs.includes("cancels Stripe billing immediately")) {
+    fail("Terms must not say uninstall cancels Stripe immediately");
+  }
+  ok("Terms describe period-end billing after uninstall");
 
   for (const doc of [
     "docs/INFRA_ACCEPTANCE.md",

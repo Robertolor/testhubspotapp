@@ -181,14 +181,16 @@ export default function TermsPage() {
           <p>
             The App is billed per HubSpot portal through Stripe. A payment
             method is required to start a trial. After the trial, Stripe charges
-            the saved card unless you cancel or uninstall.
+            the saved card unless you cancel in the App or the current period
+            ends after an uninstall.
           </p>
           <p>
-            If you cancel your subscription in the App and leave the App
-            installed, you keep access until the end of the then-current trial
-            or paid period. If you uninstall the App from HubSpot, we cancel
-            your Stripe subscription immediately and stop sync immediately. You
-            do not keep access for the remainder of that period.
+            If you cancel your subscription in the App, you keep access until
+            the end of the then-current trial or paid period. If you uninstall
+            the App from HubSpot, sync stops until you reinstall. Stripe keeps
+            the current period and does not charge again after that period
+            ends. Reinstalling the same portal before then continues the same
+            subscription.
           </p>
         </section>
 
@@ -199,8 +201,8 @@ export default function TermsPage() {
           <p>
             You may stop using the App at any time by uninstalling it from your
             HubSpot account and removing Mindbody credentials in Settings.
-            Uninstalling from HubSpot cancels Stripe billing immediately and
-            stops sync immediately.
+            Uninstalling from HubSpot turns off sync. Stripe keeps the current
+            trial or paid period and does not charge again after it ends.
           </p>
           <p>
             We may suspend or terminate access if you violate these Terms, if

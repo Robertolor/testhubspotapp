@@ -4,6 +4,7 @@ import {
   getBillingSubscriptionRow,
   upsertBillingFromSubscription,
 } from "./subscription";
+import { scheduleStripeCancelForTenant } from "./lifecycle";
 
 export function isHubspotUninstallEvent(event: Record<string, unknown>): boolean {
   const type = String(
@@ -21,8 +22,8 @@ async function persistSubscriptionStatus(
 }
 
 /**
- * HubSpot uninstall: cancel Stripe immediately and write canceled status so
- * sync APIs and the worker gate stop in the same request (no wait for Stripe webhooks).
+ * HubSpot uninstall: do not cancel Stripe today. Schedule cancel at period or
+ * trial end so an accidental reinstall can keep the paid window.
  */
 export async function cancelStripeForPortal(
   portalId: number
@@ -35,14 +36,8 @@ export async function cancelStripeForPortal(
   if (row.status === "canceled") return { canceled: false };
 
   try {
-    const subscription = await getStripe().subscriptions.cancel(
-      row.stripe_subscription_id
-    );
-    await upsertBillingFromSubscription({
-      tenantId: account.tenant_id,
-      subscription,
-    });
-    return { canceled: true };
+    const result = await scheduleStripeCancelForTenant(account.tenant_id);
+    return { canceled: result.scheduled };
   } catch (error) {
     const message = error instanceof Error ? error.message.toLowerCase() : "";
     if (

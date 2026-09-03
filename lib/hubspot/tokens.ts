@@ -62,8 +62,8 @@ async function cancelBillingAfterHubspotUninstall(portalId: number): Promise<voi
 }
 
 /**
- * HubSpot has no app.uninstall webhook. We treat a revoked OAuth token as uninstall
- * and cancel Stripe immediately.
+ * HubSpot has no app.uninstall webhook. A revoked OAuth token is uninstall:
+ * schedule Stripe cancel at period/trial end so a quick reinstall can keep the plan.
  */
 export async function getValidAccessToken(
   account: HubspotAccount

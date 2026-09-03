@@ -57,6 +57,68 @@ export function StripePortalButton({
   );
 }
 
+export function BillingPeriodEndButtons({
+  canCancel,
+  cancelAtPeriodEnd,
+}: {
+  canCancel: boolean;
+  cancelAtPeriodEnd: boolean;
+}) {
+  const [pending, setPending] = useState<"cancel_at_period_end" | "resume" | null>(
+    null
+  );
+  const [error, setError] = useState<string | null>(null);
+
+  async function updateSubscription(action: "cancel_at_period_end" | "resume") {
+    setError(null);
+    setPending(action);
+    try {
+      const res = await fetch("/api/billing/subscription", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const json = (await res.json()) as { error?: string; ok?: boolean };
+      if (!res.ok || !json.ok) {
+        throw new Error(json.error ?? "Could not update billing");
+      }
+      window.location.assign("/billing");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not update billing");
+      setPending(null);
+    }
+  }
+
+  if (!canCancel) return null;
+
+  return (
+    <span className="inline-flex flex-col items-start gap-2">
+      {error ? <ActionFeedback type="error">{error}</ActionFeedback> : null}
+      {cancelAtPeriodEnd ? (
+        <Button
+          type="button"
+          variant="secondary"
+          loading={pending === "resume"}
+          disabled={pending !== null}
+          onClick={() => updateSubscription("resume")}
+        >
+          Keep my subscription
+        </Button>
+      ) : (
+        <Button
+          type="button"
+          variant="secondary"
+          loading={pending === "cancel_at_period_end"}
+          disabled={pending !== null}
+          onClick={() => updateSubscription("cancel_at_period_end")}
+        >
+          Cancel subscription
+        </Button>
+      )}
+    </span>
+  );
+}
+
 export function BillingCheckoutButtons({
   canCheckout,
   includeTrial,

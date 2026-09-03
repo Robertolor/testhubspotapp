@@ -1,6 +1,7 @@
 import { getSession } from "@/lib/auth/session";
 import {
   BillingCheckoutButtons,
+  BillingPeriodEndButtons,
   StripePortalButton,
 } from "@/components/billing-actions";
 import { Card, CardTitle } from "@/components/ui/card";
@@ -67,9 +68,11 @@ export default async function BillingPage({
       <div>
         <h2 className="text-2xl font-semibold text-slate-900">Billing</h2>
         <p className="mt-1 text-slate-600">
-          This HubSpot portal is billed through Stripe. Cancel here to keep the
-          app installed through the end of the current trial or paid period.
-          Uninstall from HubSpot to stop billing and sync immediately.
+          This HubSpot portal is billed through Stripe. Cancel here to keep
+          access through the end of the current trial or paid period.
+          Uninstalling from HubSpot turns off sync; Stripe keeps the current
+          period and does not charge again after it ends. Install again before
+          that date to keep the same plan.
         </p>
       </div>
 
@@ -88,11 +91,10 @@ export default async function BillingPage({
       <Card className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <CardTitle>Current subscription</CardTitle>
-          {canCancel && !display.cancelAtPeriodEnd ? (
-            <StripePortalButton flow="cancel">
-              Cancel subscription
-            </StripePortalButton>
-          ) : null}
+          <BillingPeriodEndButtons
+            canCancel={canCancel}
+            cancelAtPeriodEnd={display.cancelAtPeriodEnd}
+          />
         </div>
 
         {status === "trialing" && display.trialEndsAt ? (
@@ -119,8 +121,8 @@ export default async function BillingPage({
           <p className="text-sm text-slate-700">
             You do not have a trial or subscription yet. A card is required.
             You will not be charged today. After 14 days Stripe charges the
-            card unless you cancel. Uninstalling from HubSpot stops billing
-            and sync immediately.
+            card unless you cancel. Uninstalling from HubSpot turns off sync;
+            reinstall before the period ends to keep this plan.
           </p>
         )}
 
