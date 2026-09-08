@@ -20,5 +20,11 @@
       "source": "/webhooks/stripe",
       "destination": "/api/webhooks/stripe"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/health",
+      "schedule": "0 8 * * *"
+    }
   ]
 }

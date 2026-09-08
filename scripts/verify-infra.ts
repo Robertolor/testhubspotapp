@@ -173,6 +173,16 @@ function runStaticChecks(): void {
   }
   ok("Stripe webhook signature verification is present");
 
+  const healthTs = readRepoFile("app/api/health/route.ts");
+  if (!healthTs.includes('from("tenants")')) {
+    fail("Health route must query Supabase so the project does not pause");
+  }
+  const vercelJson = readRepoFile("vercel.json");
+  if (!vercelJson.includes("/api/health") || !vercelJson.includes("crons")) {
+    fail("vercel.json must schedule a daily /api/health cron");
+  }
+  ok("Supabase keep-alive health cron is present");
+
   const hubspotWebhook = readRepoFile("app/api/webhooks/hubspot/route.ts");
   if (!hubspotWebhook.includes("cancelStripeForPortal")) {
     fail("HubSpot webhook must schedule Stripe cancel on uninstall");
